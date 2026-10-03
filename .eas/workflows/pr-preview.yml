@@ -1,0 +1,16 @@
+name: Preview on PR
+on:
+  pull_request:
+    branches: ["main"]
+jobs:
+  update:
+    name: Publish preview update
+    type: update
+    params:
+      branch: preview
+  comment:
+    name: Comment QR on PR
+    needs: [update]
+    type: github-comment
+    params:
+      updateJobId: ${{ needs.update.id }}
