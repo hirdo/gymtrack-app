@@ -74,6 +74,19 @@ export default function Login() {
       {error ? (
         <Text style={{ color: colors.error, fontFamily: fonts.body, marginTop: 8 }}>{error}</Text>
       ) : null}
+
+      {/* Setup-only diagnostic: Expo Go can't register the "gymtrack://" scheme, so it
+          generates its own redirect URI (exp://...) instead. That exact value has to be
+          added as a Valid Redirect URI in Keycloak before login works here. Remove this
+          block once a Dev Client build replaces Expo Go for testing. */}
+      <View style={{ marginTop: 24, padding: 12, borderRadius: 8, backgroundColor: colors.surface, width: "100%" }}>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11 }}>
+          Setup only — redirect URI to register in Keycloak:
+        </Text>
+        <Text selectable style={{ color: colors.text, fontFamily: fonts.body, fontSize: 12, marginTop: 4 }}>
+          {redirectUri}
+        </Text>
+      </View>
     </View>
   );
 }
