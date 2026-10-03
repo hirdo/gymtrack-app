@@ -32,6 +32,10 @@
     "eslint-config-expo": "^57.0.2",
     "typescript": "~6.0.3"
   },
+  "overrides": {
+    "react-native-worklets": "^0.13.0",
+    "react-dom": "19.2.3"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
