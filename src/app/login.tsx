@@ -3,12 +3,14 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import { router } from "expo-router";
 import { discovery, redirectUri, exchangeCode, KEYCLOAK_CLIENT_ID } from "../core/auth/keycloak";
+import { ensureRedirectUriRegistered } from "../core/auth/registerRedirectUri";
 import { useAuthStore } from "../core/auth/authStore";
 import { colors, fonts } from "../core/theme/tokens";
 
 export default function Login() {
   const setSession = useAuthStore((s) => s.setSession);
   const [isExchanging, setIsExchanging] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
@@ -53,18 +55,26 @@ export default function Login() {
       </Text>
 
       <Pressable
-        disabled={!request || isExchanging}
-        onPress={() => promptAsync()}
+        disabled={!request || isExchanging || isPreparing}
+        onPress={async () => {
+          setIsPreparing(true);
+          try {
+            await ensureRedirectUriRegistered(redirectUri);
+          } finally {
+            setIsPreparing(false);
+          }
+          promptAsync();
+        }}
         style={{
           backgroundColor: colors.primary,
           paddingVertical: 14,
           paddingHorizontal: 32,
           borderRadius: 10,
-          opacity: !request || isExchanging ? 0.6 : 1,
+          opacity: !request || isExchanging || isPreparing ? 0.6 : 1,
           marginTop: 16,
         }}
       >
-        {isExchanging ? (
+        {isExchanging || isPreparing ? (
           <ActivityIndicator color={colors.text} />
         ) : (
           <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>Log in</Text>
