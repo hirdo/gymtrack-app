@@ -1,0 +1,10 @@
+name: Publish production update
+on:
+  push:
+    branches: ["main"]
+jobs:
+  update:
+    name: Publish production update
+    type: update
+    params:
+      branch: production

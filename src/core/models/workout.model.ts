@@ -1,0 +1,162 @@
+// Ported verbatim from gymtrack-web's src/app/core/models/workout.model.ts (pure TS, no Angular coupling).
+
+// 'reps' = sets x reps x weight, 'reps_only' = sets x reps (no weight), 'duration' = sets x duration
+export type ExerciseTrackingType = "reps" | "reps_only" | "duration";
+
+export type TimeUnit = "sec" | "min";
+
+export interface Exercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps?: number;
+  weight?: number;
+  duration?: number;
+  durationUnit?: TimeUnit;
+  restTime?: number;
+  restTimeUnit?: TimeUnit;
+  notes?: string;
+  imageUrl?: string;
+  templateId?: string;
+  trackingType?: ExerciseTrackingType;
+  alternativeExerciseIds?: string[];
+}
+
+export interface Workout {
+  id: string;
+  userId?: string;
+  name: string;
+  description?: string;
+  exercises: Exercise[];
+  scheduledDate?: string;
+  completedDate?: string;
+  durationMinutes?: number;
+  category: WorkoutCategory;
+  programId?: string;
+  programRunId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkoutCategory =
+  | "strength"
+  | "cardio"
+  | "flexibility"
+  | "hiit"
+  | "custom";
+
+export type MuscleGroup =
+  | "chest" | "back" | "shoulders" | "biceps" | "triceps"
+  | "forearms" | "core" | "legs" | "glutes" | "stretch";
+
+export type Equipment =
+  | "barbell" | "dumbbell" | "machine" | "cable"
+  | "bodyweight" | "other";
+
+export interface ExerciseTemplate {
+  id: string;
+  name: string;
+  category: WorkoutCategory;
+  primaryMuscles: MuscleGroup[];
+  secondaryMuscles?: MuscleGroup[];
+  equipment: Equipment;
+  trackingType?: ExerciseTrackingType;
+  recommendedReps?: number;
+  recommendedWeight?: number;
+  recommendedDuration?: number;
+  recommendedDurationUnit?: TimeUnit;
+  recommendedRestTime?: number;
+  recommendedRestTimeUnit?: TimeUnit;
+  imageUrl?: string;
+  instructions?: string;
+  isCustom?: boolean;
+  createdBy?: string;
+}
+
+export interface ExerciseBundle {
+  id: string;
+  name: string;
+  mainExerciseId: string;
+  alternativeExerciseIds: string[];
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SetRecord {
+  setNumber: number;
+  weight?: number;
+  reps?: number;
+  duration?: number;
+  completedAt: string;
+  isWarmup?: boolean;
+}
+
+export interface ExerciseLog {
+  id: string;
+  userId: string;
+  workoutId: string;
+  exerciseIndex: number;
+  exerciseTemplateId?: string;
+  exerciseName: string;
+  trackingType?: ExerciseTrackingType;
+  date: string;
+  targetSets: number;
+  targetReps?: number;
+  targetWeight?: number;
+  targetDuration?: number;
+  restTime?: number;
+  sets: SetRecord[];
+  startedAt: string;
+  completedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProgramDay {
+  dayNumber: number;
+  name: string;
+  exercises: {
+    exerciseId: string;
+    exerciseName: string;
+    trackingType?: ExerciseTrackingType;
+    targetSets: number;
+    targetReps?: number;
+    targetWeight?: number;
+    targetDuration?: number;
+    targetDurationUnit?: TimeUnit;
+    restTime?: number;
+    restTimeUnit?: TimeUnit;
+    alternativeExerciseIds?: string[];
+  }[];
+}
+
+export type ProgramDifficulty = "no_experience" | "beginner" | "intermediate" | "advanced" | "pro";
+
+export const PROGRAM_DIFFICULTIES: { value: ProgramDifficulty; label: string; stars: number }[] = [
+  { value: "no_experience", label: "No Experience", stars: 1 },
+  { value: "beginner", label: "Beginner", stars: 2 },
+  { value: "intermediate", label: "Intermediate", stars: 3 },
+  { value: "advanced", label: "Advanced", stars: 4 },
+  { value: "pro", label: "Pro", stars: 5 },
+];
+
+export function difficultyLabel(difficulty: ProgramDifficulty): string {
+  return PROGRAM_DIFFICULTIES.find((d) => d.value === difficulty)?.label ?? difficulty;
+}
+
+export interface TrainingProgram {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  difficulty: ProgramDifficulty;
+  totalDays: number;
+  sessionsPerWeek: number;
+  days: ProgramDay[];
+  isActive?: boolean;
+  currentDay?: number;
+  completedSessions?: number;
+  createdAt: string;
+  updatedAt: string;
+}
