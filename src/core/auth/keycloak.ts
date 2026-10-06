@@ -89,3 +89,17 @@ export async function refreshAccessToken(refreshToken: string): Promise<AuthSess
     discovery
   );
 }
+
+// Ends the Keycloak SSO session tied to this refresh token. Without this, clearing only the
+// local tokens leaves Keycloak's session alive, so the next login silently re-authenticates
+// as the same user instead of prompting for credentials again.
+export async function endSession(refreshToken: string): Promise<void> {
+  await fetch(discovery.revocationEndpoint as string, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: KEYCLOAK_CLIENT_ID as string,
+      refresh_token: refreshToken,
+    }).toString(),
+  });
+}
