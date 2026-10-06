@@ -2,7 +2,7 @@
 // The DOM `File` object becomes a plain { uri, name, type } descriptor (e.g. from
 // expo-image-picker's ImagePickerAsset) — React Native's fetch + FormData otherwise
 // behave the same as the web version.
-// Not wired into any screen yet (no image upload in the MVP) — kept as a ready-to-use stub.
+// Wired into the profile avatar upload flow (src/app/(tabs)/profile.tsx).
 
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;

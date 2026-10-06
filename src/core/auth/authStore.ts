@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import {
   decodeJwt,
+  endSession,
   hasRealmRole,
   isTokenExpiringSoon,
   refreshAccessToken,
@@ -95,6 +96,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    const { refreshToken } = get();
+    if (refreshToken) {
+      try {
+        await endSession(refreshToken);
+      } catch {
+        // best-effort — still clear the local session even if Keycloak is unreachable
+      }
+    }
     await clearTokens();
     set({
       isAuthenticated: false,

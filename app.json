@@ -37,6 +37,12 @@
         {
           "backgroundColor": "#0f1219"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GymTrack needs access to your photos to set a profile avatar or exercise image."
+        }
       ]
     ],
     "experiments": {
