@@ -1,17 +1,32 @@
-import { useMemo } from "react";
-import { FlatList, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useExercises } from "../../../hooks/useExercises";
-import { getAlternatives, getExerciseById } from "../../../core/services/exercise-library.service";
-import { formatDurationValue } from "../../../core/utils/date.util";
-import { colors, fonts } from "../../../core/theme/tokens";
+import { useExercises } from "../../../../hooks/useExercises";
+import { useAuth } from "../../../../hooks/useAuth";
+import { deleteExercise, getAlternatives, getExerciseById } from "../../../../core/services/exercise-library.service";
+import { formatDurationValue } from "../../../../core/utils/date.util";
+import { colors, fonts } from "../../../../core/theme/tokens";
 
 export default function ExerciseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { exercises } = useExercises();
+  const { isAdmin } = useAuth();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const exercise = useMemo(() => (id ? getExerciseById(exercises, id) : undefined), [exercises, id]);
   const alternatives = useMemo(() => (exercise ? getAlternatives(exercises, exercise.id).slice(0, 6) : []), [exercises, exercise]);
+
+  async function handleDelete() {
+    if (!exercise || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteExercise(exercise.id);
+      router.replace("/(tabs)/exercises");
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   if (!exercise) {
     return (
@@ -38,6 +53,31 @@ export default function ExerciseDetail() {
             <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "capitalize" }}>{exercise.equipment}</Text>
           </View>
         </View>
+
+        {isAdmin ? (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Pressable
+              onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]/edit", params: { id: exercise.id } })}
+              style={{ backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 }}
+            >
+              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Edit</Text>
+            </Pressable>
+            {confirmingDelete ? (
+              <>
+                <Pressable disabled={deleting} onPress={handleDelete} style={{ backgroundColor: colors.error, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 }}>
+                  {deleting ? <ActivityIndicator color={colors.text} /> : <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Confirm</Text>}
+                </Pressable>
+                <Pressable onPress={() => setConfirmingDelete(false)} style={{ backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 }}>
+                  <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Cancel</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable onPress={() => setConfirmingDelete(true)} style={{ backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 14 }}>
+                <Text style={{ color: colors.error, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Delete</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : null}
       </View>
 
       {exercise.imageUrl ? (

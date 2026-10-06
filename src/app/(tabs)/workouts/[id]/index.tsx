@@ -4,8 +4,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useWorkouts } from "../../../../hooks/useWorkouts";
 import { useExerciseLogs } from "../../../../hooks/useExerciseLogs";
 import { useAuthStore } from "../../../../core/auth/authStore";
-import { markWorkoutComplete } from "../../../../core/services/workout.service";
-import { logsForWorkout, startWorkoutLogs } from "../../../../core/services/exercise-log.service";
+import { deleteWorkout, markWorkoutComplete } from "../../../../core/services/workout.service";
+import { deleteLogsForWorkout, logsForWorkout, startWorkoutLogs } from "../../../../core/services/exercise-log.service";
 import { formatDisplayDate } from "../../../../core/utils/date.util";
 import { colors, fonts } from "../../../../core/theme/tokens";
 
@@ -17,6 +17,8 @@ export default function WorkoutDetail() {
   const workout = workouts.find((w) => w.id === id);
   const [isStarting, setIsStarting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const workoutLogs = useMemo(() => (workout ? logsForWorkout(logs, workout.id) : []), [logs, workout]);
   const hasBeenTrained = workoutLogs.length > 0;
@@ -50,6 +52,18 @@ export default function WorkoutDetail() {
     }
   }
 
+  async function handleDelete() {
+    if (!workout || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteLogsForWorkout(logs, workout.id);
+      await deleteWorkout(workout.id);
+      router.replace("/(tabs)/workouts");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 16 }}>
       <Text style={{ color: colors.text, fontFamily: fonts.heading, fontSize: 26 }}>{workout.name}</Text>
@@ -64,25 +78,36 @@ export default function WorkoutDetail() {
       </Text>
 
       {!workout.completedDate ? (
-        <Pressable
-          disabled={isStarting}
-          onPress={hasBeenTrained ? () => router.push({ pathname: "/(tabs)/workouts/[id]/train", params: { id: workout.id } }) : handleStartWorkout}
-          style={{
-            backgroundColor: colors.primary,
-            paddingVertical: 14,
-            borderRadius: 10,
-            alignItems: "center",
-            opacity: isStarting ? 0.6 : 1,
-          }}
-        >
-          {isStarting ? (
-            <ActivityIndicator color={colors.background} />
-          ) : (
-            <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>
-              {hasBeenTrained ? "Continue Workout" : "Start Workout"}
-            </Text>
-          )}
-        </Pressable>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            disabled={isStarting}
+            onPress={hasBeenTrained ? () => router.push({ pathname: "/(tabs)/workouts/[id]/train", params: { id: workout.id } }) : handleStartWorkout}
+            style={{
+              flex: 1,
+              backgroundColor: colors.primary,
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: "center",
+              opacity: isStarting ? 0.6 : 1,
+            }}
+          >
+            {isStarting ? (
+              <ActivityIndicator color={colors.background} />
+            ) : (
+              <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>
+                {hasBeenTrained ? "Continue Workout" : "Start Workout"}
+              </Text>
+            )}
+          </Pressable>
+          {!hasBeenTrained ? (
+            <Pressable
+              onPress={() => router.push({ pathname: "/(tabs)/workouts/[id]/edit", params: { id: workout.id } })}
+              style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}
+            >
+              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>Edit</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
 
       <View style={{ gap: 10 }}>
@@ -140,6 +165,28 @@ export default function WorkoutDetail() {
             <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>Complete</Text>
           )}
         </Pressable>
+      ) : null}
+
+      {!workout.programId ? (
+        confirmingDelete ? (
+          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+            <Text style={{ color: colors.error, fontFamily: fonts.bodySemiBold, fontSize: 13, flex: 1 }}>Delete this workout?</Text>
+            <Pressable
+              disabled={isDeleting}
+              onPress={handleDelete}
+              style={{ backgroundColor: colors.error, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, opacity: isDeleting ? 0.6 : 1 }}
+            >
+              {isDeleting ? <ActivityIndicator color={colors.text} /> : <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Confirm</Text>}
+            </Pressable>
+            <Pressable disabled={isDeleting} onPress={() => setConfirmingDelete(false)} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 }}>
+              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Cancel</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable onPress={() => setConfirmingDelete(true)} style={{ alignSelf: "flex-start" }}>
+            <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13 }}>Delete workout</Text>
+          </Pressable>
+        )
       ) : null}
     </ScrollView>
   );

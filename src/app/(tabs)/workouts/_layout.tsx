@@ -14,6 +14,7 @@ export default function WorkoutsLayout() {
       <Stack.Screen name="index" options={{ title: "Workouts" }} />
       <Stack.Screen name="[id]/index" options={{ title: "Workout" }} />
       <Stack.Screen name="[id]/train" options={{ title: "Training" }} />
+      <Stack.Screen name="[id]/edit" options={{ title: "Edit Workout", presentation: "modal" }} />
       <Stack.Screen name="new" options={{ title: "New workout", presentation: "modal" }} />
     </Stack>
   );
