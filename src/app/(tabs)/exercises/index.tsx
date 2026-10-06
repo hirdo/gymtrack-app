@@ -73,6 +73,7 @@ export default function ExerciseLibrary() {
 
       {activeTab === "exercises" ? (
         <FlatList
+          key="exercises-list"
           data={filteredExercises}
           keyExtractor={(e) => e.id}
           numColumns={2}
@@ -102,6 +103,7 @@ export default function ExerciseLibrary() {
         />
       ) : (
         <FlatList
+          key="bundles-list"
           data={filteredBundles}
           keyExtractor={(b) => b.id}
           contentContainerStyle={{ padding: 16, gap: 12 }}
