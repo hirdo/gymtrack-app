@@ -14,7 +14,7 @@ export function sortExercisesByName(exercises: ExerciseTemplate[]): ExerciseTemp
 
 export function getMuscleGroups(exercises: ExerciseTemplate[]): MuscleGroup[] {
   const groups = new Set<MuscleGroup>();
-  exercises.forEach((e) => e.primaryMuscles.forEach((m) => groups.add(m)));
+  exercises.forEach((e) => (e.primaryMuscles ?? []).forEach((m) => groups.add(m)));
   return Array.from(groups).sort();
 }
 
@@ -37,11 +37,12 @@ export function searchExercises(exercises: ExerciseTemplate[], query: string): E
 export function getAlternatives(exercises: ExerciseTemplate[], exerciseId: string): ExerciseTemplate[] {
   const exercise = getExerciseById(exercises, exerciseId);
   if (!exercise) return [];
+  const exerciseMuscles = exercise.primaryMuscles ?? [];
   return exercises
-    .filter((e) => e.id !== exerciseId && e.primaryMuscles.some((m) => exercise.primaryMuscles.includes(m)))
+    .filter((e) => e.id !== exerciseId && (e.primaryMuscles ?? []).some((m) => exerciseMuscles.includes(m)))
     .sort((a, b) => {
-      const scoreA = a.primaryMuscles.filter((m) => exercise.primaryMuscles.includes(m)).length;
-      const scoreB = b.primaryMuscles.filter((m) => exercise.primaryMuscles.includes(m)).length;
+      const scoreA = (a.primaryMuscles ?? []).filter((m) => exerciseMuscles.includes(m)).length;
+      const scoreB = (b.primaryMuscles ?? []).filter((m) => exerciseMuscles.includes(m)).length;
       return scoreB - scoreA || a.name.localeCompare(b.name);
     });
 }

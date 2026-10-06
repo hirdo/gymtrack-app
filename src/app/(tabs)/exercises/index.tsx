@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FlatList, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { FlatList, Image, Pressable, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { useExercises } from "../../../hooks/useExercises";
 import { useExerciseBundles } from "../../../hooks/useExerciseBundles";
@@ -10,34 +10,21 @@ import {
   searchExercises,
 } from "../../../core/services/exercise-library.service";
 import { searchBundles } from "../../../core/services/exercise-bundle.service";
-import type { Equipment, ExerciseTemplate, MuscleGroup } from "../../../core/models/workout.model";
+import type { Equipment, ExerciseBundle, ExerciseTemplate, MuscleGroup } from "../../../core/models/workout.model";
+import { Select } from "../../../components/Select";
 import { colors, fonts } from "../../../core/theme/tokens";
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 999,
-        backgroundColor: active ? colors.primary : colors.surface,
-        marginRight: 8,
-      }}
-    >
-      <Text
-        style={{
-          color: active ? colors.background : colors.textMuted,
-          fontFamily: fonts.bodySemiBold,
-          fontSize: 12,
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
+const MUSCLE_OPTIONS = ALL_MUSCLE_GROUPS.map((m) => ({ value: m, label: m }));
+const EQUIPMENT_OPTIONS = ALL_EQUIPMENT.map((eq) => ({ value: eq, label: eq }));
+
+const searchInputStyle = {
+  backgroundColor: colors.surface,
+  borderRadius: 10,
+  paddingHorizontal: 14,
+  paddingVertical: 10,
+  color: colors.text,
+  fontFamily: fonts.body,
+} as const;
 
 export default function ExerciseLibrary() {
   const [activeTab, setActiveTab] = useState<"exercises" | "bundles">("exercises");
@@ -98,27 +85,12 @@ export default function ExerciseLibrary() {
                 onChangeText={setSearchQuery}
                 placeholder="Search exercises..."
                 placeholderTextColor={colors.textMuted}
-                style={{
-                  backgroundColor: colors.surface,
-                  borderRadius: 10,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  color: colors.text,
-                  fontFamily: fonts.body,
-                }}
+                style={searchInputStyle}
               />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Chip label="All Muscles" active={!selectedMuscle} onPress={() => setSelectedMuscle("")} />
-                {ALL_MUSCLE_GROUPS.map((m) => (
-                  <Chip key={m} label={m} active={selectedMuscle === m} onPress={() => setSelectedMuscle(m)} />
-                ))}
-              </ScrollView>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Chip label="All Equipment" active={!selectedEquipment} onPress={() => setSelectedEquipment("")} />
-                {ALL_EQUIPMENT.map((eq) => (
-                  <Chip key={eq} label={eq} active={selectedEquipment === eq} onPress={() => setSelectedEquipment(eq)} />
-                ))}
-              </ScrollView>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <Select label="Muscle Group" value={selectedMuscle} placeholder="All Muscles" options={MUSCLE_OPTIONS} onChange={setSelectedMuscle} />
+                <Select label="Equipment" value={selectedEquipment} placeholder="All Equipment" options={EQUIPMENT_OPTIONS} onChange={setSelectedEquipment} />
+              </View>
             </View>
           }
           ListEmptyComponent={
@@ -140,21 +112,9 @@ export default function ExerciseLibrary() {
                 onChangeText={setBundleSearchQuery}
                 placeholder="Search bundles..."
                 placeholderTextColor={colors.textMuted}
-                style={{
-                  backgroundColor: colors.surface,
-                  borderRadius: 10,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  color: colors.text,
-                  fontFamily: fonts.body,
-                }}
+                style={searchInputStyle}
               />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <Chip label="All Muscles" active={!selectedBundleMuscle} onPress={() => setSelectedBundleMuscle("")} />
-                {ALL_MUSCLE_GROUPS.map((m) => (
-                  <Chip key={m} label={m} active={selectedBundleMuscle === m} onPress={() => setSelectedBundleMuscle(m)} />
-                ))}
-              </ScrollView>
+              <Select label="Muscle Group" value={selectedBundleMuscle} placeholder="All Muscles" options={MUSCLE_OPTIONS} onChange={setSelectedBundleMuscle} />
             </View>
           }
           ListEmptyComponent={
@@ -162,40 +122,48 @@ export default function ExerciseLibrary() {
               No bundles match your search. A bundle groups a main exercise with its alternates for reuse across programs.
             </Text>
           }
-          renderItem={({ item }) => {
-            const main = getExerciseById(exercises, item.mainExerciseId);
-            return (
-              <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10 }}>
-                <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{item.name}</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  {main?.imageUrl ? (
-                    <Image source={{ uri: main.imageUrl }} style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.text }} />
-                  ) : null}
-                  <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{main?.name ?? "Unknown exercise"}</Text>
-                </View>
-                {item.alternativeExerciseIds.length > 0 ? (
-                  <View style={{ gap: 6, borderTopWidth: 1, borderTopColor: colors.secondary, paddingTop: 10 }}>
-                    <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 10, textTransform: "uppercase" }}>
-                      Alternatives
-                    </Text>
-                    {item.alternativeExerciseIds.map((altId) => {
-                      const alt = getExerciseById(exercises, altId);
-                      return (
-                        <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          {alt?.imageUrl ? (
-                            <Image source={{ uri: alt.imageUrl }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
-                          ) : null}
-                          <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>{alt?.name ?? "Unknown exercise"}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ) : null}
-              </View>
-            );
-          }}
+          renderItem={({ item }) => <BundleCard bundle={item} exercises={exercises} />}
         />
       )}
+    </View>
+  );
+}
+
+// Firestore data isn't guaranteed to match the TS model exactly (e.g. bundles created outside
+// the normal form flow) — guard against a missing/null alternativeExerciseIds instead of
+// trusting the type, which previously crashed this screen to a blank white screen in the
+// production preview build (no red-box overlay there to surface the TypeError).
+function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: ExerciseTemplate[] }) {
+  const main = getExerciseById(exercises, bundle.mainExerciseId);
+  const alternativeIds = bundle.alternativeExerciseIds ?? [];
+
+  return (
+    <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10 }}>
+      <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{bundle.name}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        {main?.imageUrl ? (
+          <Image source={{ uri: main.imageUrl }} style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.text }} />
+        ) : null}
+        <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{main?.name ?? "Unknown exercise"}</Text>
+      </View>
+      {alternativeIds.length > 0 ? (
+        <View style={{ gap: 6, borderTopWidth: 1, borderTopColor: colors.secondary, paddingTop: 10 }}>
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 10, textTransform: "uppercase" }}>
+            Alternatives
+          </Text>
+          {alternativeIds.map((altId) => {
+            const alt = getExerciseById(exercises, altId);
+            return (
+              <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {alt?.imageUrl ? (
+                  <Image source={{ uri: alt.imageUrl }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
+                ) : null}
+                <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>{alt?.name ?? "Unknown exercise"}</Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -213,7 +181,7 @@ function ExerciseCard({ exercise }: { exercise: ExerciseTemplate }) {
         {exercise.name}
       </Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-        {exercise.primaryMuscles.slice(0, 2).map((m) => (
+        {(exercise.primaryMuscles ?? []).slice(0, 2).map((m) => (
           <View key={m} style={{ backgroundColor: colors.background, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
             <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 9, textTransform: "uppercase" }}>{m}</Text>
           </View>

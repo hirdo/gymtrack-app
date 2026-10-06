@@ -51,7 +51,7 @@ export default function ExerciseDetail() {
       <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10 }}>
         <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, textTransform: "uppercase" }}>Target Muscles</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {exercise.primaryMuscles.map((m) => (
+          {(exercise.primaryMuscles ?? []).map((m) => (
             <View key={m} style={{ backgroundColor: colors.background, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}>
               <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>{m}</Text>
             </View>
