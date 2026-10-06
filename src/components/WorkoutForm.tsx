@@ -1,9 +1,17 @@
 // RN port of gymtrack-web's WorkoutCreateComponent — shared by the "new workout" and "edit
-// workout" routes. Exercise rows are reorderable via react-native-draggable-flatlist (needs a
-// GestureHandlerRootView ancestor, added at the app root).
+// workout" routes.
+//
+// Exercise rows are reordered with Up/Down buttons rather than real drag-and-drop:
+// react-native-draggable-flatlist (via react-native-reanimated's Worklets native module)
+// crashed this screen to a blank white screen on open — the native Worklets module isn't
+// actually available at runtime in this app (confirmed by a jest-expo render test, which hit
+// the exact same failure at import time), despite reanimated/gesture-handler being present as
+// JS dependencies. Being present in node_modules doesn't mean the matching native module is
+// actually initialized — a lesson learned the hard way; don't reintroduce this dependency
+// without first proving a real render works on-device.
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, Text, TextInput, View } from "react-native";
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from "react-native-draggable-flatlist";
+import { ActivityIndicator, FlatList, Image, Pressable, Text, TextInput, View } from "react-native";
+import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "../core/auth/authStore";
 import { useWorkouts } from "../hooks/useWorkouts";
@@ -117,6 +125,16 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
     setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.rowId !== rowId) : prev));
   }
 
+  function moveExerciseRow(index: number, direction: -1 | 1) {
+    setRows((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
   function toggleDurationUnit(row: ExerciseRow) {
     const newUnit: TimeUnit = row.durationUnit === "sec" ? "min" : "sec";
     const newValue = row.duration != null ? (newUnit === "sec" ? row.duration * 60 : row.duration / 60) : row.duration;
@@ -228,23 +246,31 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
     }
   }
 
-  function renderExerciseRow({ item: row, drag, isActive, getIndex }: RenderItemParams<ExerciseRow>) {
-    const index = getIndex() ?? 0;
+  function renderExerciseRow({ item: row, index }: ListRenderItemInfo<ExerciseRow>) {
     return (
-      <ScaleDecorator>
-        <View style={{ backgroundColor: isActive ? colors.secondary : colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 }}>
+      <View>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Pressable onLongPress={drag} disabled={scheduleOnlyMode} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textMuted, fontSize: 16 }}>☰</Text>
-              <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 13, textTransform: "uppercase" }}>
-                Exercise {index + 1}
-              </Text>
-            </Pressable>
-            {rows.length > 1 && !scheduleOnlyMode ? (
-              <Pressable onPress={() => removeExerciseRow(row.rowId)}>
-                <Text style={{ color: colors.error, fontSize: 13 }}>Remove</Text>
-              </Pressable>
-            ) : null}
+            <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 13, textTransform: "uppercase" }}>
+              Exercise {index + 1}
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              {!scheduleOnlyMode ? (
+                <>
+                  <Pressable disabled={index === 0} onPress={() => moveExerciseRow(index, -1)} style={{ opacity: index === 0 ? 0.3 : 1 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 16 }}>▲</Text>
+                  </Pressable>
+                  <Pressable disabled={index === rows.length - 1} onPress={() => moveExerciseRow(index, 1)} style={{ opacity: index === rows.length - 1 ? 0.3 : 1 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 16 }}>▼</Text>
+                  </Pressable>
+                </>
+              ) : null}
+              {rows.length > 1 && !scheduleOnlyMode ? (
+                <Pressable onPress={() => removeExerciseRow(row.rowId)}>
+                  <Text style={{ color: colors.error, fontSize: 13 }}>Remove</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           <Pressable
@@ -321,15 +347,14 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             ) : null}
           </View>
         </View>
-      </ScaleDecorator>
+      </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <DraggableFlatList
+      <FlatList
         data={rows}
-        onDragEnd={({ data }) => setRows(data)}
         keyExtractor={(r) => r.rowId}
         renderItem={renderExerciseRow}
         contentContainerStyle={{ padding: 16 }}

@@ -1,13 +1,18 @@
-// RN port of gymtrack-web's ProgramCreateComponent (admin-only). Real drag-and-drop for both
-// days and exercises-within-a-day, each via its own react-native-draggable-flatlist instance —
-// nesting two DraggableFlatLists doesn't work, so day reordering gets its own full-screen modal
-// instead of being a second list nested inside the exercise list.
+// RN port of gymtrack-web's ProgramCreateComponent (admin-only).
+//
+// Both days and exercises-within-a-day are reordered with Up/Down buttons rather than real
+// drag-and-drop: react-native-draggable-flatlist (via react-native-reanimated's Worklets native
+// module) crashed this screen to a blank white screen on open — the native Worklets module
+// isn't actually available at runtime in this app (confirmed by a jest-expo render test, which
+// hit the exact same failure at import time), despite reanimated/gesture-handler being present
+// as JS dependencies. Don't reintroduce this dependency without first proving a real render
+// works on-device.
 //
 // Scope cut vs. web: "duplicate a range of days" (an admin power-tool for cloning e.g. days 1-3
 // as 4-6) is left out; single-day duplicate is kept.
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import DraggableFlatList, { RenderItemParams, ScaleDecorator } from "react-native-draggable-flatlist";
+import { ActivityIndicator, FlatList, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
 import { useExercises } from "../hooks/useExercises";
 import { useAuthStore } from "../core/auth/authStore";
@@ -154,6 +159,25 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
     updateDay(currentDay.dayKey, { exercises: currentDay.exercises.filter((e) => e.rowId !== rowId) });
   }
 
+  function moveExerciseRow(index: number, direction: -1 | 1) {
+    const exercises = currentDay.exercises;
+    const target = index + direction;
+    if (target < 0 || target >= exercises.length) return;
+    const next = [...exercises];
+    [next[index], next[target]] = [next[target], next[index]];
+    updateDay(currentDay.dayKey, { exercises: next });
+  }
+
+  function moveDay(index: number, direction: -1 | 1) {
+    setDays((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
   function toggleUnit(row: ProgramExerciseRow, field: "duration" | "rest") {
     if (field === "duration") {
       const newUnit: TimeUnit = row.targetDurationUnit === "sec" ? "min" : "sec";
@@ -275,20 +299,27 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
     }
   }
 
-  function renderExerciseRow({ item: row, drag, isActive }: RenderItemParams<ProgramExerciseRow>) {
+  function renderExerciseRow({ item: row, index }: ListRenderItemInfo<ProgramExerciseRow>) {
     return (
-      <ScaleDecorator>
-        <View style={{ backgroundColor: isActive ? colors.secondary : colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 }}>
+      <View>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Pressable onLongPress={drag} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textMuted, fontSize: 16 }}>☰</Text>
-              <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>Drag to reorder</Text>
-            </Pressable>
-            {currentDay.exercises.length > 1 ? (
-              <Pressable onPress={() => removeExerciseRow(row.rowId)}>
-                <Text style={{ color: colors.error, fontSize: 13 }}>Remove</Text>
+            <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 12, textTransform: "uppercase" }}>
+              Exercise {index + 1}
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <Pressable disabled={index === 0} onPress={() => moveExerciseRow(index, -1)} style={{ opacity: index === 0 ? 0.3 : 1 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 16 }}>▲</Text>
               </Pressable>
-            ) : null}
+              <Pressable disabled={index === currentDay.exercises.length - 1} onPress={() => moveExerciseRow(index, 1)} style={{ opacity: index === currentDay.exercises.length - 1 ? 0.3 : 1 }}>
+                <Text style={{ color: colors.textMuted, fontSize: 16 }}>▼</Text>
+              </Pressable>
+              {currentDay.exercises.length > 1 ? (
+                <Pressable onPress={() => removeExerciseRow(row.rowId)}>
+                  <Text style={{ color: colors.error, fontSize: 13 }}>Remove</Text>
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           <Pressable
@@ -345,16 +376,15 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
             ) : null}
           </View>
         </View>
-      </ScaleDecorator>
+      </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <DraggableFlatList
+      <FlatList
         data={currentDay.exercises}
         keyExtractor={(e) => e.rowId}
-        onDragEnd={({ data }) => updateDay(currentDay.dayKey, { exercises: data })}
         renderItem={renderExerciseRow}
         contentContainerStyle={{ padding: 16 }}
         ListHeaderComponent={
@@ -464,23 +494,24 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
               <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>Done</Text>
             </Pressable>
           </View>
-          <DraggableFlatList
+          <FlatList
             data={days}
             keyExtractor={(d) => d.dayKey}
-            onDragEnd={({ data }) => setDays(data)}
             contentContainerStyle={{ padding: 16 }}
-            renderItem={({ item, drag, isActive, getIndex }: RenderItemParams<DayRow>) => (
-              <ScaleDecorator>
-                <Pressable
-                  onLongPress={drag}
-                  style={{ backgroundColor: isActive ? colors.secondary : colors.surface, borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 10 }}
-                >
-                  <Text style={{ color: colors.textMuted, fontSize: 16 }}>☰</Text>
-                  <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>
-                    Day {(getIndex() ?? 0) + 1}: {item.name || "Untitled"}
-                  </Text>
+            renderItem={({ item, index }: ListRenderItemInfo<DayRow>) => (
+              <View
+                style={{ backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 10, flexDirection: "row", alignItems: "center", gap: 10 }}
+              >
+                <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 14, flex: 1 }}>
+                  Day {index + 1}: {item.name || "Untitled"}
+                </Text>
+                <Pressable disabled={index === 0} onPress={() => moveDay(index, -1)} style={{ opacity: index === 0 ? 0.3 : 1 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 18 }}>▲</Text>
                 </Pressable>
-              </ScaleDecorator>
+                <Pressable disabled={index === days.length - 1} onPress={() => moveDay(index, 1)} style={{ opacity: index === days.length - 1 ? 0.3 : 1 }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 18 }}>▼</Text>
+                </Pressable>
+              </View>
             )}
           />
         </View>

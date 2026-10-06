@@ -1,7 +1,6 @@
 import "../../global.css";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as WebBrowser from "expo-web-browser";
@@ -47,22 +46,20 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: colors.background },
-            headerTintColor: colors.text,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="membership" options={{ title: "Membership" }} />
-        </Stack>
-      </View>
-    </GestureHandlerRootView>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: colors.background },
+          headerTintColor: colors.text,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="membership" options={{ title: "Membership" }} />
+      </Stack>
+    </View>
   );
 }
