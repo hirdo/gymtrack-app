@@ -77,27 +77,32 @@ export function BundlePickerModal({ visible, onClose, onSelect }: BundlePickerMo
           renderItem={({ item: bundle }) => {
             const main = getExerciseById(exercises, bundle.mainExerciseId);
             return (
-              <Pressable
-                onPress={() => {
-                  onSelect(bundle);
-                  onClose();
-                }}
-                style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.surface, borderRadius: 12, padding: 12 }}
-              >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.surface, borderRadius: 12, padding: 12 }}>
                 {main?.imageUrl ? (
+                  // A sibling of the selecting Pressable below, not nested inside it: a tappable
+                  // image nested inside a tappable row left touch priority to RN's gesture-
+                  // responder negotiation, which didn't reliably pick the small inner one.
                   <ZoomableThumbnail uri={main.imageUrl} alt={bundle.name} style={{ width: 44, height: 44, borderRadius: 8, backgroundColor: colors.text }} />
                 ) : null}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>{bundle.name}</Text>
-                  <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }} numberOfLines={1}>
-                    {main?.name ?? "Unknown exercise"}
-                    {bundle.alternativeExerciseIds.length > 0
-                      ? ` · ${bundle.alternativeExerciseIds.length} alternate${bundle.alternativeExerciseIds.length > 1 ? "s" : ""}`
-                      : ""}
-                  </Text>
-                </View>
-                <Text style={{ color: colors.textMuted }}>›</Text>
-              </Pressable>
+                <Pressable
+                  onPress={() => {
+                    onSelect(bundle);
+                    onClose();
+                  }}
+                  style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>{bundle.name}</Text>
+                    <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }} numberOfLines={1}>
+                      {main?.name ?? "Unknown exercise"}
+                      {bundle.alternativeExerciseIds.length > 0
+                        ? ` · ${bundle.alternativeExerciseIds.length} alternate${bundle.alternativeExerciseIds.length > 1 ? "s" : ""}`
+                        : ""}
+                    </Text>
+                  </View>
+                  <Text style={{ color: colors.textMuted }}>›</Text>
+                </Pressable>
+              </View>
             );
           }}
         />

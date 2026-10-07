@@ -139,9 +139,9 @@ export default function Dashboard() {
               <Pressable style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <RingProgress
                   percent={workoutCompletionPercent(workout, logs)}
-                  size={44}
+                  size={48}
+                  strokeWidth={4}
                   color={workout.completedDate ? colors.accent : colors.primary}
-                  showLabel={false}
                 />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{workout.name}</Text>

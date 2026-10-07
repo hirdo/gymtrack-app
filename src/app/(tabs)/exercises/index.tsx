@@ -196,11 +196,11 @@ function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: 
 
 function ExerciseCard({ exercise }: { exercise: ExerciseTemplate }) {
   return (
-    <Pressable
-      onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: exercise.id } })}
-      style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 8 }}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 8 }}>
       {exercise.imageUrl ? (
+        // A sibling of the navigating Pressable below, not nested inside it: a tappable image
+        // nested inside a tappable card left touch priority to RN's gesture-responder
+        // negotiation, which didn't reliably pick the small inner one.
         <ZoomableThumbnail
           uri={exercise.imageUrl}
           alt={exercise.name}
@@ -208,19 +208,24 @@ function ExerciseCard({ exercise }: { exercise: ExerciseTemplate }) {
           resizeMode="contain"
         />
       ) : null}
-      <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
-        {exercise.name}
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-        {(exercise.primaryMuscles ?? []).slice(0, 2).map((m) => (
-          <View key={m} style={{ backgroundColor: colors.background, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-            <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 9, textTransform: "uppercase" }}>{m}</Text>
-          </View>
-        ))}
-      </View>
-      <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>
-        {exercise.equipment} · {exercise.category}
-      </Text>
-    </Pressable>
+      <Pressable
+        onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: exercise.id } })}
+        style={{ gap: 8 }}
+      >
+        <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
+          {exercise.name}
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+          {(exercise.primaryMuscles ?? []).slice(0, 2).map((m) => (
+            <View key={m} style={{ backgroundColor: colors.background, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+              <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 9, textTransform: "uppercase" }}>{m}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>
+          {exercise.equipment} · {exercise.category}
+        </Text>
+      </Pressable>
+    </View>
   );
 }

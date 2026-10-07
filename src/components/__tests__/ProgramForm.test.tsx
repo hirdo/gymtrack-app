@@ -83,12 +83,16 @@ describe("ProgramForm edit mode", () => {
 
   // Regression test for a reported device freeze: pressing Cancel while a TextInput is still
   // focused fired router.back() in the same tick as the keyboard's dismiss animation, which is
-  // a known RN/Android UI-thread stall. handleCancel must dismiss the keyboard first.
-  it("dismisses the keyboard before navigating back on Cancel", async () => {
+  // a known RN/Android UI-thread stall. handleCancel must dismiss the keyboard, then give the
+  // dismiss animation a real head start (a short delay, not just issuing dismiss() first) before
+  // navigating — calling dismiss() synchronously right before navigating was tried and still froze.
+  it("dismisses the keyboard, then navigates back on Cancel after a short delay", async () => {
     const dismissSpy = jest.spyOn(Keyboard, "dismiss");
     const { getByText } = await render(<ProgramForm editingProgram={editingProgram} />);
     await fireEvent.press(getByText("Cancel"));
     expect(dismissSpy).toHaveBeenCalled();
+    expect(router.back).not.toHaveBeenCalled();
+    await new Promise((resolve) => setTimeout(resolve, 100));
     expect(router.back).toHaveBeenCalled();
   });
 });

@@ -744,9 +744,8 @@ export default function WorkoutTrain() {
           <Pressable onPress={() => {}} style={{ backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, maxHeight: "70%", padding: 16, gap: 8 }}>
             <Text style={{ color: colors.text, fontFamily: fonts.heading, fontSize: 16, textTransform: "uppercase" }}>Swap Exercise</Text>
             {currentExerciseAlternatives.map((alt) => (
-              <Pressable
+              <View
                 key={alt.id}
-                onPress={() => switchToExercise(alt.id)}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
@@ -757,13 +756,18 @@ export default function WorkoutTrain() {
                 }}
               >
                 {alt.imageUrl ? (
+                  // A sibling of the selecting Pressable below, not nested inside it: a tappable
+                  // image nested inside a tappable row left touch priority to RN's gesture-
+                  // responder negotiation, which didn't reliably pick the small inner one.
                   <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
                 ) : (
                   <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.background }} />
                 )}
-                <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, flex: 1 }}>{alt.name}</Text>
-                {currentLog?.exerciseTemplateId === alt.id ? <Text style={{ color: colors.primary }}>✓</Text> : null}
-              </Pressable>
+                <Pressable onPress={() => switchToExercise(alt.id)} style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+                  <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13, flex: 1 }}>{alt.name}</Text>
+                  {currentLog?.exerciseTemplateId === alt.id ? <Text style={{ color: colors.primary }}>✓</Text> : null}
+                </Pressable>
+              </View>
             ))}
           </Pressable>
         </Pressable>

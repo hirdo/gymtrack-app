@@ -136,8 +136,7 @@ export function ExercisePickerModal({
           renderItem={({ item }) => {
             const isSelected = selectedIds.includes(item.id);
             return (
-              <Pressable
-                onPress={() => handlePress(item)}
+              <View
                 style={{
                   flex: 1,
                   backgroundColor: colors.surface,
@@ -149,6 +148,9 @@ export function ExercisePickerModal({
                 }}
               >
                 {item.imageUrl ? (
+                  // A sibling of the selecting Pressable below, not nested inside it: a tappable
+                  // image nested inside a tappable card left touch priority to RN's gesture-
+                  // responder negotiation, which didn't reliably pick the small inner one.
                   <ZoomableThumbnail
                     uri={item.imageUrl}
                     alt={item.name}
@@ -156,16 +158,18 @@ export function ExercisePickerModal({
                     resizeMode="contain"
                   />
                 ) : null}
-                <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>
-                  {item.equipment}
-                </Text>
+                <Pressable onPress={() => handlePress(item)} style={{ gap: 8 }}>
+                  <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>
+                    {item.equipment}
+                  </Text>
+                </Pressable>
                 {isSelected ? (
                   <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 11, position: "absolute", top: 8, right: 8 }}>✓</Text>
                 ) : null}
-              </Pressable>
+              </View>
             );
           }}
         />

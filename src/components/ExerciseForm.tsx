@@ -9,6 +9,7 @@ import { useAuthStore } from "../core/auth/authStore";
 import { addExercise, updateExercise, ALL_EQUIPMENT, ALL_MUSCLE_GROUPS } from "../core/services/exercise-library.service";
 import { uploadImage } from "../core/services/cloudinary.service";
 import type { Equipment, ExerciseTemplate, ExerciseTrackingType, MuscleGroup, TimeUnit, WorkoutCategory } from "../core/models/workout.model";
+import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
 import { Select } from "./Select";
 import { colors, fonts } from "../core/theme/tokens";
 
@@ -78,12 +79,8 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
     setImageUrl(asset.uri);
   }
 
-  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
-  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
-  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
   function handleCancel() {
-    Keyboard.dismiss();
-    router.back();
+    dismissKeyboardThenNavigate(() => router.back());
   }
 
   async function handleSubmit() {
@@ -127,7 +124,7 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
         }
       }
 
-      router.replace({ pathname: "/(tabs)/exercises/[id]", params: { id: exerciseId } });
+      dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/exercises/[id]", params: { id: exerciseId } }));
     } finally {
       setSubmitting(false);
     }

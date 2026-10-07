@@ -9,6 +9,7 @@ import { getExerciseById } from "../core/services/exercise-library.service";
 import type { ExerciseBundle } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { ZoomableThumbnail } from "./ZoomableThumbnail";
+import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
 import { colors, fonts } from "../core/theme/tokens";
 
 interface BundleFormProps {
@@ -30,12 +31,8 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
   const mainExercise = mainExerciseId ? getExerciseById(exercises, mainExerciseId) : undefined;
   const canSubmit = name.trim().length > 0 && !!mainExerciseId && !submitting;
 
-  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
-  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
-  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
   function handleCancel() {
-    Keyboard.dismiss();
-    router.back();
+    dismissKeyboardThenNavigate(() => router.back());
   }
 
   async function handleSubmit() {
@@ -45,10 +42,10 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
     try {
       if (isEditMode && editingBundle) {
         await updateBundle(editingBundle.id, { name: name.trim(), mainExerciseId, alternativeExerciseIds: alternativeIds });
-        router.back();
+        dismissKeyboardThenNavigate(() => router.back());
       } else {
         await addBundle({ name: name.trim(), mainExerciseId, alternativeExerciseIds: alternativeIds }, userId);
-        router.replace({ pathname: "/(tabs)/exercises", params: { tab: "bundles" } });
+        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/exercises", params: { tab: "bundles" } }));
       }
     } finally {
       setSubmitting(false);
@@ -74,18 +71,21 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
 
       <View style={{ gap: 6 }}>
         <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>Main Exercise</Text>
-        <Pressable
-          onPress={() => setMainPickerOpen(true)}
-          style={{ backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
-        >
+        <View style={{ backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 10 }}>
           {mainExercise?.imageUrl ? (
+            // A sibling of the "choose main exercise" Pressable, not nested inside it — two
+            // Pressables stacked on each other left touch priority to RN's gesture-responder
+            // negotiation, which didn't reliably pick the small inner one. Siblings remove the
+            // ambiguity entirely.
             <ZoomableThumbnail uri={mainExercise.imageUrl} alt={mainExercise.name} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
           ) : null}
-          <Text style={{ flex: 1, color: mainExercise ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }}>
-            {mainExercise?.name ?? "Choose main exercise…"}
-          </Text>
-          <Text style={{ color: colors.textMuted }}>▾</Text>
-        </Pressable>
+          <Pressable onPress={() => setMainPickerOpen(true)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={{ flex: 1, color: mainExercise ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }}>
+              {mainExercise?.name ?? "Choose main exercise…"}
+            </Text>
+            <Text style={{ color: colors.textMuted }}>▾</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={{ gap: 8 }}>

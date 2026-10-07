@@ -147,22 +147,25 @@ export default function ExerciseDetail() {
             scrollEnabled={false}
             ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
             renderItem={({ item: alt }) => (
-              <Pressable
-                onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: alt.id } })}
-                style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 8, borderRadius: 10 }}
-              >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 8, borderRadius: 10 }}>
                 {alt.imageUrl ? (
+                  // A sibling of the navigating Pressable below, not nested inside it: a
+                  // tappable image nested inside a tappable row left touch priority to RN's
+                  // gesture-responder negotiation, which didn't reliably pick the small inner one.
                   <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.text }} resizeMode="contain" />
                 ) : (
                   <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold }}>{alt.name.charAt(0)}</Text>
                   </View>
                 )}
-                <View>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: alt.id } })}
+                  style={{ flex: 1 }}
+                >
                   <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>{alt.name}</Text>
                   <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>{alt.equipment}</Text>
-                </View>
-              </Pressable>
+                </Pressable>
+              </View>
             )}
           />
         </View>

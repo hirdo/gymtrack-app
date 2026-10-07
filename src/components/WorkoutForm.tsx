@@ -20,6 +20,7 @@ import { addWorkout, updateWorkout } from "../core/services/workout.service";
 import { getExerciseById } from "../core/services/exercise-library.service";
 import { toLocalDateString } from "../core/utils/date.util";
 import { uid } from "../core/utils/id.util";
+import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
 import type { Exercise, ExerciseTemplate, ExerciseTrackingType, TimeUnit, Workout, WorkoutCategory } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { DatePickerField } from "./DatePickerField";
@@ -190,12 +191,8 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
     return getExerciseById(libraryExercises, altPickerRow.exerciseId)?.primaryMuscles?.[0] ?? null;
   }, [altPickerRow, libraryExercises]);
 
-  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
-  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
-  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
   function handleCancel() {
-    Keyboard.dismiss();
-    router.back();
+    dismissKeyboardThenNavigate(() => router.back());
   }
 
   async function handleSubmit() {
@@ -240,7 +237,7 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             exercises,
           });
         }
-        router.replace({ pathname: "/(tabs)/workouts/[id]", params: { id: editingWorkout.id } });
+        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/workouts/[id]", params: { id: editingWorkout.id } }));
       } else {
         const workout = await addWorkout(userId, {
           name: name.trim(),
@@ -249,7 +246,7 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
           scheduledDate: scheduledDate ?? undefined,
           exercises,
         });
-        router.replace({ pathname: "/(tabs)/workouts/[id]", params: { id: workout.id } });
+        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/workouts/[id]", params: { id: workout.id } }));
       }
     } finally {
       setSubmitting(false);
@@ -283,23 +280,29 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             </View>
           </View>
 
-          <Pressable
-            disabled={scheduleOnlyMode}
-            onPress={() => setPickerTarget(row.rowId)}
-            style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
-          >
+          <View style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
             {row.imageUrl ? (
+              // A sibling of the "choose exercise" Pressable, not nested inside it — two
+              // Pressables stacked on each other left touch priority to RN's gesture-responder
+              // negotiation, which didn't reliably pick the small inner one. Siblings remove
+              // the ambiguity entirely.
               <ZoomableThumbnail
                 uri={row.imageUrl}
                 alt={row.name}
                 style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: colors.text }}
               />
             ) : null}
-            <Text style={{ flex: 1, color: row.name ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
-              {row.name || "Choose exercise…"}
-            </Text>
-            <Text style={{ color: colors.textMuted }}>▾</Text>
-          </Pressable>
+            <Pressable
+              disabled={scheduleOnlyMode}
+              onPress={() => setPickerTarget(row.rowId)}
+              style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              <Text style={{ flex: 1, color: row.name ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
+                {row.name || "Choose exercise…"}
+              </Text>
+              <Text style={{ color: colors.textMuted }}>▾</Text>
+            </Pressable>
+          </View>
           {!scheduleOnlyMode && !row.name.trim() ? (
             <Text style={{ color: colors.error, fontFamily: fonts.body, fontSize: 11 }}>Exercise is required.</Text>
           ) : null}

@@ -16,6 +16,7 @@ import { useAuthStore } from "../core/auth/authStore";
 import { createProgram, updateProgram } from "../core/services/program.service";
 import { getExerciseById } from "../core/services/exercise-library.service";
 import { uid } from "../core/utils/id.util";
+import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
 import { PROGRAM_DIFFICULTIES } from "../core/models/workout.model";
 import type { ExerciseBundle, ExerciseTemplate, ExerciseTrackingType, ProgramDay, ProgramDifficulty, TimeUnit, TrainingProgram } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
@@ -268,12 +269,8 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
     return getExerciseById(libraryExercises, altPickerRow.exerciseId)?.primaryMuscles?.[0] ?? null;
   }, [altPickerRow, libraryExercises]);
 
-  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
-  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
-  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
   function handleCancel() {
-    Keyboard.dismiss();
-    router.back();
+    dismissKeyboardThenNavigate(() => router.back());
   }
 
   async function handleSubmit() {
@@ -308,7 +305,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
           sessionsPerWeek,
           days: builtDays,
         });
-        router.replace({ pathname: "/(tabs)/programs/[id]", params: { id: editingProgram.id } });
+        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/programs/[id]", params: { id: editingProgram.id } }));
       } else {
         if (!userId) return;
         const program = await createProgram(
@@ -325,7 +322,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
           },
           userId
         );
-        router.replace({ pathname: "/(tabs)/programs/[id]", params: { id: program.id } });
+        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/programs/[id]", params: { id: program.id } }));
       }
     } finally {
       setSubmitting(false);
@@ -357,18 +354,24 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
           </View>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable
-              onPress={() => setPickerTarget(row.rowId)}
+            <View
               style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
             >
               {rowImageUrl ? (
+                // A sibling of the "choose exercise" Pressable below, not nested inside it: two
+                // Pressables stacked on top of each other (one tiny, one covering the whole row)
+                // left touch-priority down to RN's gesture-responder negotiation, which wasn't
+                // reliably picking the small inner one — taps on the thumbnail just reopened the
+                // exercise picker instead of zooming. Siblings remove the ambiguity entirely.
                 <ZoomableThumbnail uri={rowImageUrl} alt={row.exerciseName} style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: colors.text }} />
               ) : null}
-              <Text style={{ flex: 1, color: row.exerciseName ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
-                {row.exerciseName || "Choose exercise…"}
-              </Text>
-              <Text style={{ color: colors.textMuted }}>▾</Text>
-            </Pressable>
+              <Pressable onPress={() => setPickerTarget(row.rowId)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text style={{ flex: 1, color: row.exerciseName ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
+                  {row.exerciseName || "Choose exercise…"}
+                </Text>
+                <Text style={{ color: colors.textMuted }}>▾</Text>
+              </Pressable>
+            </View>
             <Pressable
               onPress={() => setBundlePickerTarget(row.rowId)}
               style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" }}
