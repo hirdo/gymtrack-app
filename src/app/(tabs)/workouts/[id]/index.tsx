@@ -7,6 +7,7 @@ import { useAuthStore } from "../../../../core/auth/authStore";
 import { deleteWorkout, markWorkoutComplete } from "../../../../core/services/workout.service";
 import { deleteLogsForWorkout, logsForWorkout, startWorkoutLogs } from "../../../../core/services/exercise-log.service";
 import { formatDisplayDate } from "../../../../core/utils/date.util";
+import { ZoomableThumbnail } from "../../../../components/ZoomableThumbnail";
 import { colors, fonts } from "../../../../core/theme/tokens";
 
 export default function WorkoutDetail() {
@@ -115,11 +116,27 @@ export default function WorkoutDetail() {
           const exerciseLogs = workoutLogs.filter((l) => l.exerciseIndex === index);
           return (
             <View key={`${exercise.id}-${index}`} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14 }}>
-              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>{exercise.name}</Text>
-              <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13, marginTop: 2 }}>
-                {exercise.sets} sets{exercise.reps ? ` x ${exercise.reps} reps` : ""}
-                {exercise.weight ? ` @ ${exercise.weight}kg` : ""}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                {exercise.imageUrl ? (
+                  <ZoomableThumbnail
+                    uri={exercise.imageUrl}
+                    alt={exercise.name}
+                    style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.text }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={{ width: 56, height: 56, borderRadius: 10, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ color: colors.primary, fontFamily: fonts.heading, fontSize: 18 }}>{index + 1}</Text>
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>{exercise.name}</Text>
+                  <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13, marginTop: 2 }}>
+                    {exercise.sets} sets{exercise.reps ? ` x ${exercise.reps} reps` : ""}
+                    {exercise.weight ? ` @ ${exercise.weight}kg` : ""}
+                  </Text>
+                </View>
+              </View>
 
               {workout.completedDate && exerciseLogs.some((l) => l.sets.length > 0) ? (
                 <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.secondary, gap: 6 }}>

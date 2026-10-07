@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { fireEvent, render } from "@testing-library/react-native";
+import { Keyboard } from "react-native";
 import { ExerciseForm } from "../ExerciseForm";
+import { router } from "expo-router";
 import type { ExerciseTemplate } from "../../core/models/workout.model";
 
 const mockUpdateDocument = jest.fn(async (..._args: unknown[]) => undefined);
@@ -36,5 +38,16 @@ describe("ExerciseForm edit mode - instructions save", () => {
     expect(mockUpdateDocument).toHaveBeenCalled();
     const call = mockUpdateDocument.mock.calls[0] as unknown as [string, string, Record<string, unknown>];
     expect(call[2].instructions).toBe("New instructions text");
+  });
+
+  // Regression test for a reported device freeze: pressing Cancel while a TextInput is still
+  // focused fired router.back() in the same tick as the keyboard's dismiss animation, which is
+  // a known RN/Android UI-thread stall. handleCancel must dismiss the keyboard first.
+  it("dismisses the keyboard before navigating back on Cancel", async () => {
+    const dismissSpy = jest.spyOn(Keyboard, "dismiss");
+    const { getByText } = await render(<ExerciseForm editingExercise={editingExercise} />);
+    await fireEvent.press(getByText("Cancel"));
+    expect(dismissSpy).toHaveBeenCalled();
+    expect(router.back).toHaveBeenCalled();
   });
 });

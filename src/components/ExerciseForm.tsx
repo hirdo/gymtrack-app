@@ -2,7 +2,7 @@
 // library). The one deferred-from-Phase-2 CRUD screen this migration plan promised for the
 // Admin phase.
 import { useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useAuthStore } from "../core/auth/authStore";
@@ -78,8 +78,17 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
     setImageUrl(asset.uri);
   }
 
+  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
+  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
+  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
+  function handleCancel() {
+    Keyboard.dismiss();
+    router.back();
+  }
+
   async function handleSubmit() {
     if (!userId || !canSubmit) return;
+    Keyboard.dismiss();
     setSubmitting(true);
     setUploadError(null);
     try {
@@ -214,7 +223,7 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
         >
           {submitting ? <ActivityIndicator color={colors.background} /> : <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{isEditMode ? "Save Changes" : "Create Exercise"}</Text>}
         </Pressable>
-        <Pressable disabled={submitting} onPress={() => router.back()} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
+        <Pressable disabled={submitting} onPress={handleCancel} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
           <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>
         </Pressable>
       </View>

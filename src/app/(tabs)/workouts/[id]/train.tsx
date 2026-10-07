@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   AppState,
-  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -32,6 +31,7 @@ import { markWorkoutComplete } from "../../../../core/services/workout.service";
 import { useAuthStore } from "../../../../core/auth/authStore";
 import { formatDisplayDate, formatTime, parseLocalDate } from "../../../../core/utils/date.util";
 import type { ExerciseLog, SetRecord } from "../../../../core/models/workout.model";
+import { ZoomableThumbnail } from "../../../../components/ZoomableThumbnail";
 import { colors, fonts } from "../../../../core/theme/tokens";
 
 const DEFAULT_REST_SECONDS = 120;
@@ -507,7 +507,12 @@ export default function WorkoutTrain() {
       {currentLog ? (
         <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 14 }}>
           {currentExerciseImage ? (
-            <Image source={{ uri: currentExerciseImage }} style={{ width: "100%", height: 160, borderRadius: 12, backgroundColor: colors.text }} resizeMode="contain" />
+            <ZoomableThumbnail
+              uri={currentExerciseImage}
+              alt={currentLog.exerciseName}
+              style={{ width: "100%", height: 160, borderRadius: 12, backgroundColor: colors.text }}
+              resizeMode="contain"
+            />
           ) : null}
 
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -752,7 +757,7 @@ export default function WorkoutTrain() {
                 }}
               >
                 {alt.imageUrl ? (
-                  <Image source={{ uri: alt.imageUrl }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
+                  <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
                 ) : (
                   <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.background }} />
                 )}

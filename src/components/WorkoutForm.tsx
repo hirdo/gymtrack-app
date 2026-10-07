@@ -10,7 +10,7 @@
 // actually initialized — a lesson learned the hard way; don't reintroduce this dependency
 // without first proving a real render works on-device.
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Keyboard, Pressable, Text, TextInput, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "../core/auth/authStore";
@@ -190,8 +190,17 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
     return getExerciseById(libraryExercises, altPickerRow.exerciseId)?.primaryMuscles?.[0] ?? null;
   }, [altPickerRow, libraryExercises]);
 
+  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
+  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
+  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
+  function handleCancel() {
+    Keyboard.dismiss();
+    router.back();
+  }
+
   async function handleSubmit() {
     if (!userId || !canSubmit) return;
+    Keyboard.dismiss();
 
     if (scheduledDate) {
       const conflict = workouts.find((w) => w.scheduledDate === scheduledDate && w.id !== editingWorkout?.id);
@@ -455,7 +464,7 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             </Pressable>
             <Pressable
               disabled={submitting}
-              onPress={() => router.back()}
+              onPress={handleCancel}
               style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}
             >
               <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>

@@ -170,7 +170,7 @@ export default function ProgramDetail() {
             <View key={day.dayNumber} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: expanded ? 10 : 0 }}>
               <Pressable onPress={() => toggleDay(day.dayNumber)} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 14, flex: 1 }} numberOfLines={1}>
-                  <Text style={{ color: colors.primary }}>Day {day.dayNumber + 1} </Text>
+                  <Text style={{ color: colors.primary }}>Day {day.dayNumber + 1}:{"  "}</Text>
                   {day.name}
                   <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11 }}> · {day.exercises.length} exercise{day.exercises.length === 1 ? "" : "s"}</Text>
                 </Text>

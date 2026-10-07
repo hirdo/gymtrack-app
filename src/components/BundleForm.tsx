@@ -1,6 +1,6 @@
 // RN port of gymtrack-web's ExerciseBundleCreateComponent (admin-only).
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Keyboard, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "../core/auth/authStore";
 import { useExercises } from "../hooks/useExercises";
@@ -30,8 +30,17 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
   const mainExercise = mainExerciseId ? getExerciseById(exercises, mainExerciseId) : undefined;
   const canSubmit = name.trim().length > 0 && !!mainExerciseId && !submitting;
 
+  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
+  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
+  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
+  function handleCancel() {
+    Keyboard.dismiss();
+    router.back();
+  }
+
   async function handleSubmit() {
     if (!userId || !canSubmit || !mainExerciseId) return;
+    Keyboard.dismiss();
     setSubmitting(true);
     try {
       if (isEditMode && editingBundle) {
@@ -112,7 +121,7 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
         >
           {submitting ? <ActivityIndicator color={colors.background} /> : <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{isEditMode ? "Save Changes" : "Create Bundle"}</Text>}
         </Pressable>
-        <Pressable disabled={submitting} onPress={() => router.back()} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
+        <Pressable disabled={submitting} onPress={handleCancel} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
           <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>
         </Pressable>
       </View>

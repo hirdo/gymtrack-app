@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useExercises } from "../../../../hooks/useExercises";
 import { useAuth } from "../../../../hooks/useAuth";
 import { deleteExercise, getAlternatives, getExerciseById } from "../../../../core/services/exercise-library.service";
 import { formatDurationValue } from "../../../../core/utils/date.util";
+import { ZoomableThumbnail } from "../../../../components/ZoomableThumbnail";
 import { colors, fonts } from "../../../../core/theme/tokens";
 
 export default function ExerciseDetail() {
@@ -81,8 +82,9 @@ export default function ExerciseDetail() {
       </View>
 
       {exercise.imageUrl ? (
-        <Image
-          source={{ uri: exercise.imageUrl }}
+        <ZoomableThumbnail
+          uri={exercise.imageUrl}
+          alt={exercise.name}
           style={{ width: "100%", height: 220, borderRadius: 16, backgroundColor: colors.text }}
           resizeMode="contain"
         />
@@ -150,7 +152,7 @@ export default function ExerciseDetail() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 8, borderRadius: 10 }}
               >
                 {alt.imageUrl ? (
-                  <Image source={{ uri: alt.imageUrl }} style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.text }} resizeMode="contain" />
+                  <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.text }} resizeMode="contain" />
                 ) : (
                   <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.background, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold }}>{alt.name.charAt(0)}</Text>

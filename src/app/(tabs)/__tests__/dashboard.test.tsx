@@ -4,6 +4,7 @@ import Dashboard from "../dashboard";
 import { useWorkouts } from "../../../hooks/useWorkouts";
 import { usePrograms } from "../../../hooks/usePrograms";
 import { useProfile } from "../../../hooks/useProfile";
+import { useExerciseLogs } from "../../../hooks/useExerciseLogs";
 import type { TrainingProgram, Workout } from "../../../core/models/workout.model";
 
 jest.mock("../../../core/services/firestore.service", () => ({
@@ -14,6 +15,7 @@ jest.mock("../../../core/services/firestore.service", () => ({
 jest.mock("../../../hooks/useWorkouts", () => ({ useWorkouts: jest.fn() }));
 jest.mock("../../../hooks/usePrograms", () => ({ usePrograms: jest.fn() }));
 jest.mock("../../../hooks/useProfile", () => ({ useProfile: jest.fn() }));
+jest.mock("../../../hooks/useExerciseLogs", () => ({ useExerciseLogs: jest.fn() }));
 jest.mock("expo-router", () => ({
   router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() },
   Link: ({ children }: { children: React.ReactNode }) => children,
@@ -22,6 +24,7 @@ jest.mock("expo-router", () => ({
 const mockUseWorkouts = useWorkouts as jest.Mock;
 const mockUsePrograms = usePrograms as jest.Mock;
 const mockUseProfile = useProfile as jest.Mock;
+const mockUseExerciseLogs = useExerciseLogs as jest.Mock;
 
 const program: TrainingProgram = {
   id: "p1",
@@ -50,6 +53,7 @@ const activeProgramWorkout: Workout = {
 describe("Dashboard", () => {
   beforeEach(() => {
     mockUseProfile.mockReturnValue({ profile: { firstName: "Alex" }, isAdmin: false, updateAvatar: jest.fn() });
+    mockUseExerciseLogs.mockReturnValue({ logs: [] });
   });
 
   it("renders with no workouts without crashing", async () => {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FlatList, Image, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { Link, router } from "expo-router";
 import { useExercises } from "../../../hooks/useExercises";
 import { useExerciseBundles } from "../../../hooks/useExerciseBundles";
@@ -13,6 +13,7 @@ import {
 import { searchBundles } from "../../../core/services/exercise-bundle.service";
 import type { Equipment, ExerciseBundle, ExerciseTemplate, MuscleGroup } from "../../../core/models/workout.model";
 import { Select } from "../../../components/Select";
+import { ZoomableThumbnail } from "../../../components/ZoomableThumbnail";
 import { colors, fonts } from "../../../core/theme/tokens";
 
 const MUSCLE_OPTIONS = ALL_MUSCLE_GROUPS.map((m) => ({ value: m, label: m }));
@@ -167,7 +168,7 @@ function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: 
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {main?.imageUrl ? (
-          <Image source={{ uri: main.imageUrl }} style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.text }} />
+          <ZoomableThumbnail uri={main.imageUrl} alt={main.name} style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.text }} />
         ) : null}
         <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{main?.name ?? "Unknown exercise"}</Text>
       </View>
@@ -181,7 +182,7 @@ function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: 
             return (
               <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 {alt?.imageUrl ? (
-                  <Image source={{ uri: alt.imageUrl }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
+                  <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
                 ) : null}
                 <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>{alt?.name ?? "Unknown exercise"}</Text>
               </View>
@@ -200,7 +201,12 @@ function ExerciseCard({ exercise }: { exercise: ExerciseTemplate }) {
       style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 8 }}
     >
       {exercise.imageUrl ? (
-        <Image source={{ uri: exercise.imageUrl }} style={{ width: "100%", height: 90, borderRadius: 8, backgroundColor: colors.text }} resizeMode="contain" />
+        <ZoomableThumbnail
+          uri={exercise.imageUrl}
+          alt={exercise.name}
+          style={{ width: "100%", height: 90, borderRadius: 8, backgroundColor: colors.text }}
+          resizeMode="contain"
+        />
       ) : null}
       <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
         {exercise.name}

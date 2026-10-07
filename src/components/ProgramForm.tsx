@@ -8,7 +8,7 @@
 // as JS dependencies. Don't reintroduce this dependency without first proving a real render
 // works on-device.
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Keyboard, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
 import { useExercises } from "../hooks/useExercises";
@@ -268,8 +268,17 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
     return getExerciseById(libraryExercises, altPickerRow.exerciseId)?.primaryMuscles?.[0] ?? null;
   }, [altPickerRow, libraryExercises]);
 
+  // Dismiss the keyboard before any navigation (back or replace): firing a screen transition
+  // while a TextInput is still focused and the keyboard is mid-dismiss-animation is a known RN/
+  // Android freeze — the UI thread stalls resolving two layout-affecting animations at once.
+  function handleCancel() {
+    Keyboard.dismiss();
+    router.back();
+  }
+
   async function handleSubmit() {
     if (!canSubmit) return;
+    Keyboard.dismiss();
     const builtDays: ProgramDay[] = days.map((d, dayNumber) => ({
       dayNumber,
       name: d.name.trim(),
@@ -523,17 +532,17 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
                 <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>
                   Copy a range of days (e.g. Day 1-3) and append them as identical new days at the end.
                 </Text>
-                <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+                <View style={{ flexDirection: "row", gap: 10 }}>
                   <NumField label="From Day" value={duplicateRangeStart} onChange={(v) => setDuplicateRangeStart(v ?? 1)} />
                   <NumField label="To Day" value={duplicateRangeEnd} onChange={(v) => setDuplicateRangeEnd(v ?? 1)} />
-                  <Pressable
-                    disabled={!canDuplicateRange}
-                    onPress={duplicateDayRange}
-                    style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, paddingVertical: 12, alignItems: "center", opacity: canDuplicateRange ? 1 : 0.4 }}
-                  >
-                    <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>Duplicate as New Days</Text>
-                  </Pressable>
                 </View>
+                <Pressable
+                  disabled={!canDuplicateRange}
+                  onPress={duplicateDayRange}
+                  style={{ backgroundColor: colors.background, borderRadius: 10, paddingVertical: 12, alignItems: "center", opacity: canDuplicateRange ? 1 : 0.4 }}
+                >
+                  <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Duplicate as New Days</Text>
+                </Pressable>
               </View>
             ) : null}
 
@@ -552,7 +561,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
               >
                 {submitting ? <ActivityIndicator color={colors.background} /> : <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{isEditMode ? "Save Changes" : "Create Program"}</Text>}
               </Pressable>
-              <Pressable disabled={submitting} onPress={() => router.back()} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
+              <Pressable disabled={submitting} onPress={handleCancel} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
                 <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>
               </Pressable>
             </View>
