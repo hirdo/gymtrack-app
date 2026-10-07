@@ -17,12 +17,16 @@ interface SelectProps<T extends string> {
   placeholder: string;
   options: SelectOption<T>[];
   onChange: (value: T | "") => void;
+  // false for a required field that always has a real value selected (e.g. Category,
+  // Equipment, Tracking Type) — those must never offer a "clear selection" row whose label
+  // just echoes the field name. true (default) for an optional filter (e.g. "All Muscles").
+  allowClear?: boolean;
 }
 
-export function Select<T extends string>({ label, value, placeholder, options, onChange }: SelectProps<T>) {
+export function Select<T extends string>({ label, value, placeholder, options, onChange, allowClear = true }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
-  const rows: SelectOption<T | "">[] = [{ value: "", label: placeholder }, ...options];
+  const rows: SelectOption<T | "">[] = allowClear ? [{ value: "", label: placeholder }, ...options] : options;
 
   return (
     <View style={{ flex: 1, gap: 6 }}>

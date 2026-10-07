@@ -125,7 +125,11 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 16 }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ padding: 16, gap: 16 }}
+      keyboardShouldPersistTaps="handled"
+    >
       <Pressable onPress={handlePickImage} style={{ alignSelf: "center" }}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={{ width: 120, height: 120, borderRadius: 12, backgroundColor: colors.text }} resizeMode="contain" />
@@ -150,14 +154,14 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
 
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={{ flex: 1 }}>
-          <Select label="Category" value={category} placeholder="Category" options={CATEGORY_OPTIONS} onChange={(v) => v && setCategory(v)} />
+          <Select label="Category" value={category} placeholder="Category" options={CATEGORY_OPTIONS} onChange={(v) => v && setCategory(v)} allowClear={false} />
         </View>
         <View style={{ flex: 1 }}>
-          <Select label="Equipment" value={equipment} placeholder="Equipment" options={EQUIPMENT_OPTIONS} onChange={(v) => v && setEquipment(v)} />
+          <Select label="Equipment" value={equipment} placeholder="Equipment" options={EQUIPMENT_OPTIONS} onChange={(v) => v && setEquipment(v)} allowClear={false} />
         </View>
       </View>
 
-      <Select label="Tracking Type" value={trackingType} placeholder="Tracking Type" options={TRACKING_OPTIONS} onChange={(v) => v && setTrackingType(v)} />
+      <Select label="Tracking Type" value={trackingType} placeholder="Tracking Type" options={TRACKING_OPTIONS} onChange={(v) => v && setTrackingType(v)} allowClear={false} />
 
       <View style={{ gap: 8 }}>
         <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>

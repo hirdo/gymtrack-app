@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { usePrograms } from "../../../../hooks/usePrograms";
 import { useExercises } from "../../../../hooks/useExercises";
@@ -10,6 +10,7 @@ import { getExerciseById } from "../../../../core/services/exercise-library.serv
 import { chooseProgram, deleteProgram, getUserActiveWorkout, setProgramActive } from "../../../../core/services/program.service";
 import { PROGRAM_DIFFICULTIES, difficultyLabel } from "../../../../core/models/workout.model";
 import { formatDurationValue } from "../../../../core/utils/date.util";
+import { ZoomableThumbnail } from "../../../../components/ZoomableThumbnail";
 import { colors, fonts } from "../../../../core/theme/tokens";
 
 export default function ProgramDetail() {
@@ -181,7 +182,9 @@ export default function ProgramDetail() {
                     return (
                       <View key={ex.exerciseId} style={{ backgroundColor: colors.background, borderRadius: 10, padding: 10, gap: 8 }}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                          {img ? <Image source={{ uri: img }} style={{ width: 48, height: 48, borderRadius: 8, backgroundColor: colors.text }} /> : null}
+                          {img ? (
+                            <ZoomableThumbnail uri={img} alt={ex.exerciseName} style={{ width: 48, height: 48, borderRadius: 8, backgroundColor: colors.text }} />
+                          ) : null}
                           <View style={{ flex: 1 }}>
                             <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{ex.exerciseName}</Text>
                             <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11 }}>

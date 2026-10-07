@@ -7,11 +7,8 @@
 // hit the exact same failure at import time), despite reanimated/gesture-handler being present
 // as JS dependencies. Don't reintroduce this dependency without first proving a real render
 // works on-device.
-//
-// Scope cut vs. web: "duplicate a range of days" (an admin power-tool for cloning e.g. days 1-3
-// as 4-6) is left out; single-day duplicate is kept.
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
 import { useExercises } from "../hooks/useExercises";
@@ -20,9 +17,11 @@ import { createProgram, updateProgram } from "../core/services/program.service";
 import { getExerciseById } from "../core/services/exercise-library.service";
 import { uid } from "../core/utils/id.util";
 import { PROGRAM_DIFFICULTIES } from "../core/models/workout.model";
-import type { ExerciseTemplate, ExerciseTrackingType, ProgramDay, ProgramDifficulty, TimeUnit, TrainingProgram } from "../core/models/workout.model";
+import type { ExerciseBundle, ExerciseTemplate, ExerciseTrackingType, ProgramDay, ProgramDifficulty, TimeUnit, TrainingProgram } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
+import { BundlePickerModal } from "./BundlePickerModal";
 import { Select } from "./Select";
+import { ZoomableThumbnail } from "./ZoomableThumbnail";
 import { colors, fonts } from "../core/theme/tokens";
 
 const DIFFICULTY_OPTIONS = PROGRAM_DIFFICULTIES.map((d) => ({ value: d.value, label: `${"★".repeat(d.stars)} ${d.label}` }));
@@ -116,6 +115,9 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
 
   const [pickerTarget, setPickerTarget] = useState<string | null>(null);
   const [altPickerTarget, setAltPickerTarget] = useState<string | null>(null);
+  const [bundlePickerTarget, setBundlePickerTarget] = useState<string | null>(null);
+  const [duplicateRangeStart, setDuplicateRangeStart] = useState(1);
+  const [duplicateRangeEnd, setDuplicateRangeEnd] = useState(1);
 
   const currentDay = days[currentDayIndex] ?? days[0];
 
@@ -148,6 +150,21 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
       exercises: source.exercises.map((e) => ({ ...e, rowId: uid() })),
     };
     setDays((prev) => [...prev, clone]);
+  }
+
+  // Copies Day `duplicateRangeStart`..`duplicateRangeEnd` as a new block appended to the end,
+  // in the same order — e.g. duplicating Days 1-3 of a 3-day program adds Days 4-6 with
+  // identical names/exercises. Mirrors gymtrack-web's duplicateDayRange().
+  const canDuplicateRange = duplicateRangeStart >= 1 && duplicateRangeEnd >= duplicateRangeStart && duplicateRangeEnd <= days.length;
+
+  function duplicateDayRange() {
+    if (!canDuplicateRange) return;
+    const clones: DayRow[] = days.slice(duplicateRangeStart - 1, duplicateRangeEnd).map((d) => ({
+      dayKey: uid(),
+      name: d.name,
+      exercises: d.exercises.map((e) => ({ ...e, rowId: uid() })),
+    }));
+    setDays((prev) => [...prev, ...clones]);
   }
 
   function addExerciseToCurrentDay() {
@@ -238,6 +255,13 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
     }
   }
 
+  function applyPickedBundle(rowId: string, bundle: ExerciseBundle) {
+    const mainExercise = getExerciseById(libraryExercises, bundle.mainExerciseId);
+    if (!mainExercise) return;
+    applyPickedExercise(rowId, mainExercise);
+    updateExerciseRow(rowId, { alternativeExerciseIds: bundle.alternativeExerciseIds });
+  }
+
   const altPickerRow = currentDay.exercises.find((e) => e.rowId === altPickerTarget);
   const altDefaultMuscle = useMemo(() => {
     if (!altPickerRow?.exerciseId) return null;
@@ -300,6 +324,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
   }
 
   function renderExerciseRow({ item: row, index }: ListRenderItemInfo<ProgramExerciseRow>) {
+    const rowImageUrl = row.exerciseId ? getExerciseById(libraryExercises, row.exerciseId)?.imageUrl : undefined;
     return (
       <View>
         <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, gap: 10 }}>
@@ -322,15 +347,29 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
             </View>
           </View>
 
-          <Pressable
-            onPress={() => setPickerTarget(row.rowId)}
-            style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
-          >
-            <Text style={{ flex: 1, color: row.exerciseName ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
-              {row.exerciseName || "Choose exercise…"}
-            </Text>
-            <Text style={{ color: colors.textMuted }}>▾</Text>
-          </Pressable>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pressable
+              onPress={() => setPickerTarget(row.rowId)}
+              style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              {rowImageUrl ? (
+                <ZoomableThumbnail uri={rowImageUrl} alt={row.exerciseName} style={{ width: 26, height: 26, borderRadius: 6, backgroundColor: colors.text }} />
+              ) : null}
+              <Text style={{ flex: 1, color: row.exerciseName ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
+                {row.exerciseName || "Choose exercise…"}
+              </Text>
+              <Text style={{ color: colors.textMuted }}>▾</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setBundlePickerTarget(row.rowId)}
+              style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" }}
+            >
+              <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11 }}>Use{"\n"}Bundle</Text>
+            </Pressable>
+          </View>
+          {!row.exerciseName.trim() ? (
+            <Text style={{ color: colors.error, fontFamily: fonts.body, fontSize: 11 }}>Exercise is required.</Text>
+          ) : null}
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             {row.trackingType === "duration" ? (
@@ -360,7 +399,9 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
                 const alt = getExerciseById(libraryExercises, altId);
                 return (
                   <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.background, borderRadius: 8, paddingLeft: 4, paddingRight: 8, paddingVertical: 4 }}>
-                    {alt?.imageUrl ? <Image source={{ uri: alt.imageUrl }} style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: colors.text }} /> : null}
+                    {alt?.imageUrl ? (
+                      <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: colors.text }} />
+                    ) : null}
                     <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 11 }}>{alt?.name ?? "?"}</Text>
                     <Pressable onPress={() => updateExerciseRow(row.rowId, { alternativeExerciseIds: row.alternativeExerciseIds.filter((a) => a !== altId) })}>
                       <Text style={{ color: colors.textMuted, fontSize: 11 }}>✕</Text>
@@ -387,6 +428,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
         keyExtractor={(e) => e.rowId}
         renderItem={renderExerciseRow}
         contentContainerStyle={{ padding: 16 }}
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={{ gap: 14, marginBottom: 16 }}>
             <View style={{ gap: 6 }}>
@@ -414,7 +456,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Select label="Difficulty" value={difficulty} placeholder="Difficulty" options={DIFFICULTY_OPTIONS} onChange={(v) => v && setDifficulty(v)} />
+                <Select label="Difficulty" value={difficulty} placeholder="Difficulty" options={DIFFICULTY_OPTIONS} onChange={(v) => v && setDifficulty(v)} allowClear={false} />
               </View>
               <View style={{ flex: 1 }}>
                 <NumField label="Sessions / Week" value={sessionsPerWeek} onChange={(v) => setSessionsPerWeek(v ?? 1)} />
@@ -464,6 +506,9 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
                 </Pressable>
               ) : null}
             </View>
+            {!currentDay.name.trim() ? (
+              <Text style={{ color: colors.error, fontFamily: fonts.body, fontSize: 11, marginTop: -8 }}>Day name is required.</Text>
+            ) : null}
 
             <Pressable onPress={addExerciseToCurrentDay} style={{ backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 8, alignItems: "center" }}>
               <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>+ Add Exercise to Day {currentDayIndex + 1}</Text>
@@ -471,17 +516,46 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
           </View>
         }
         ListFooterComponent={
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 24 }}>
-            <Pressable
-              disabled={!canSubmit}
-              onPress={handleSubmit}
-              style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", opacity: canSubmit ? 1 : 0.5 }}
-            >
-              {submitting ? <ActivityIndicator color={colors.background} /> : <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{isEditMode ? "Save Changes" : "Create Program"}</Text>}
-            </Pressable>
-            <Pressable disabled={submitting} onPress={() => router.back()} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
-              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>
-            </Pressable>
+          <View style={{ gap: 14, marginTop: 8, marginBottom: 24 }}>
+            {days.length > 1 ? (
+              <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10 }}>
+                <Text style={{ color: colors.text, fontFamily: fonts.heading, fontSize: 14, textTransform: "uppercase" }}>Duplicate a Block of Days</Text>
+                <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>
+                  Copy a range of days (e.g. Day 1-3) and append them as identical new days at the end.
+                </Text>
+                <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+                  <NumField label="From Day" value={duplicateRangeStart} onChange={(v) => setDuplicateRangeStart(v ?? 1)} />
+                  <NumField label="To Day" value={duplicateRangeEnd} onChange={(v) => setDuplicateRangeEnd(v ?? 1)} />
+                  <Pressable
+                    disabled={!canDuplicateRange}
+                    onPress={duplicateDayRange}
+                    style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, paddingVertical: 12, alignItems: "center", opacity: canDuplicateRange ? 1 : 0.4 }}
+                  >
+                    <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>Duplicate as New Days</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+
+            {!canSubmit && !submitting ? (
+              <Text style={{ color: colors.error, fontFamily: fonts.body, fontSize: 12 }}>
+                {!name.trim() ? "Program name is required. " : ""}
+                Every day needs a name and every exercise row needs an exercise selected before you can save.
+              </Text>
+            ) : null}
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                disabled={!canSubmit}
+                onPress={handleSubmit}
+                style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 14, alignItems: "center", opacity: canSubmit ? 1 : 0.5 }}
+              >
+                {submitting ? <ActivityIndicator color={colors.background} /> : <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{isEditMode ? "Save Changes" : "Create Program"}</Text>}
+              </Pressable>
+              <Pressable disabled={submitting} onPress={() => router.back()} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}>
+                <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>
+              </Pressable>
+            </View>
           </View>
         }
       />
@@ -536,6 +610,14 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
         onSelect={() => {}}
         onSelectMultiple={(chosen) => {
           if (altPickerTarget) updateExerciseRow(altPickerTarget, { alternativeExerciseIds: chosen.map((e) => e.id) });
+        }}
+      />
+
+      <BundlePickerModal
+        visible={bundlePickerTarget !== null}
+        onClose={() => setBundlePickerTarget(null)}
+        onSelect={(bundle) => {
+          if (bundlePickerTarget) applyPickedBundle(bundlePickerTarget, bundle);
         }}
       />
     </View>

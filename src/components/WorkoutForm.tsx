@@ -10,7 +10,7 @@
 // actually initialized — a lesson learned the hard way; don't reintroduce this dependency
 // without first proving a real render works on-device.
 import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "../core/auth/authStore";
@@ -24,6 +24,7 @@ import type { Exercise, ExerciseTemplate, ExerciseTrackingType, TimeUnit, Workou
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { DatePickerField } from "./DatePickerField";
 import { Select } from "./Select";
+import { ZoomableThumbnail } from "./ZoomableThumbnail";
 import { colors, fonts } from "../core/theme/tokens";
 
 const CATEGORY_OPTIONS: { value: WorkoutCategory; label: string }[] = [
@@ -279,13 +280,20 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}
           >
             {row.imageUrl ? (
-              <Image source={{ uri: row.imageUrl }} style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: colors.text }} />
+              <ZoomableThumbnail
+                uri={row.imageUrl}
+                alt={row.name}
+                style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: colors.text }}
+              />
             ) : null}
             <Text style={{ flex: 1, color: row.name ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }} numberOfLines={1}>
               {row.name || "Choose exercise…"}
             </Text>
             <Text style={{ color: colors.textMuted }}>▾</Text>
           </Pressable>
+          {!scheduleOnlyMode && !row.name.trim() ? (
+            <Text style={{ color: colors.error, fontFamily: fonts.body, fontSize: 11 }}>Exercise is required.</Text>
+          ) : null}
 
           {row.trackingType === "duration" ? (
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -329,7 +337,9 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
                 const alt = getExerciseById(libraryExercises, altId);
                 return (
                   <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.background, borderRadius: 8, paddingLeft: 4, paddingRight: 8, paddingVertical: 4 }}>
-                    {alt?.imageUrl ? <Image source={{ uri: alt.imageUrl }} style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: colors.text }} /> : null}
+                    {alt?.imageUrl ? (
+                      <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 22, height: 22, borderRadius: 5, backgroundColor: colors.text }} />
+                    ) : null}
                     <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 11 }}>{alt?.name ?? "?"}</Text>
                     {!scheduleOnlyMode ? (
                       <Pressable onPress={() => updateRow(row.rowId, { alternativeExerciseIds: row.alternativeExerciseIds.filter((id) => id !== altId) })}>
@@ -358,6 +368,7 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
         keyExtractor={(r) => r.rowId}
         renderItem={renderExerciseRow}
         contentContainerStyle={{ padding: 16 }}
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <View style={{ gap: 14, marginBottom: 16 }}>
             {scheduleOnlyMode ? (
@@ -397,7 +408,7 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1, opacity: scheduleOnlyMode ? 0.5 : 1 }} pointerEvents={scheduleOnlyMode ? "none" : "auto"}>
-                <Select label="Category" value={category} placeholder="Category" options={CATEGORY_OPTIONS} onChange={(v) => v && setCategory(v)} />
+                <Select label="Category" value={category} placeholder="Category" options={CATEGORY_OPTIONS} onChange={(v) => v && setCategory(v)} allowClear={false} />
               </View>
               <View style={{ flex: 1 }}>
                 <DatePickerField label="Schedule Date" value={scheduledDate} onChange={setScheduledDate} minDate={minDate} />
@@ -421,7 +432,14 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
           </View>
         }
         ListFooterComponent={
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 24 }}>
+          <View style={{ gap: 10, marginTop: 8, marginBottom: 24 }}>
+            {!canSubmit && !submitting ? (
+              <Text style={{ color: colors.error, fontFamily: fonts.body, fontSize: 12 }}>
+                {!name.trim() ? "Workout name is required. " : ""}
+                Every exercise row needs an exercise selected before you can save.
+              </Text>
+            ) : null}
+            <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable
               disabled={!canSubmit}
               onPress={handleSubmit}
@@ -442,6 +460,7 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             >
               <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>Cancel</Text>
             </Pressable>
+            </View>
           </View>
         }
       />

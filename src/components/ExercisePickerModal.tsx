@@ -2,7 +2,7 @@
 // the exercise library and pick one exercise (single mode) or several (multiple mode, used for
 // "alternative exercises", capped at maxSelect).
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, Image, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { FlatList, Modal, Pressable, Text, TextInput, View } from "react-native";
 import { useExercises } from "../hooks/useExercises";
 import {
   ALL_EQUIPMENT,
@@ -11,6 +11,7 @@ import {
 } from "../core/services/exercise-library.service";
 import type { Equipment, ExerciseTemplate, MuscleGroup } from "../core/models/workout.model";
 import { Select } from "./Select";
+import { ZoomableThumbnail } from "./ZoomableThumbnail";
 import { colors, fonts } from "../core/theme/tokens";
 
 const MUSCLE_OPTIONS = ALL_MUSCLE_GROUPS.map((m) => ({ value: m, label: m }));
@@ -104,6 +105,7 @@ export function ExercisePickerModal({
           numColumns={2}
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={{ padding: 16, paddingBottom: multiple ? 90 : 16, gap: 12 }}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={{ marginBottom: 12, gap: 10 }}>
               <TextInput
@@ -147,7 +149,12 @@ export function ExercisePickerModal({
                 }}
               >
                 {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 80, borderRadius: 8, backgroundColor: colors.text }} resizeMode="contain" />
+                  <ZoomableThumbnail
+                    uri={item.imageUrl}
+                    alt={item.name}
+                    style={{ width: "100%", height: 80, borderRadius: 8, backgroundColor: colors.text }}
+                    resizeMode="contain"
+                  />
                 ) : null}
                 <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
                   {item.name}

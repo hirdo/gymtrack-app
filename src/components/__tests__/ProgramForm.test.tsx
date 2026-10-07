@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { fireEvent, render } from "@testing-library/react-native";
 import { ProgramForm } from "../ProgramForm";
 import { useExercises } from "../../hooks/useExercises";
+import { useExerciseBundles } from "../../hooks/useExerciseBundles";
 import { useAuthStore } from "../../core/auth/authStore";
 import type { TrainingProgram } from "../../core/models/workout.model";
 
@@ -11,10 +12,12 @@ jest.mock("../../core/services/firestore.service", () => ({
   deleteDocument: jest.fn(async () => undefined),
 }));
 jest.mock("../../hooks/useExercises", () => ({ useExercises: jest.fn() }));
+jest.mock("../../hooks/useExerciseBundles", () => ({ useExerciseBundles: jest.fn() }));
 jest.mock("../../core/auth/authStore", () => ({ useAuthStore: jest.fn() }));
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() } }));
 
 const mockUseExercises = useExercises as jest.Mock;
+const mockUseExerciseBundles = useExerciseBundles as jest.Mock;
 const mockUseAuthStore = useAuthStore as unknown as jest.Mock;
 
 const editingProgram: TrainingProgram = {
@@ -54,6 +57,7 @@ describe("ProgramForm edit mode", () => {
       ],
     });
     mockUseAuthStore.mockReturnValue("u1");
+    mockUseExerciseBundles.mockReturnValue({ bundles: [] });
   });
 
   it("renders with a real multi-day program without crashing", async () => {

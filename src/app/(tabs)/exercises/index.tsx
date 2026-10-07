@@ -92,6 +92,7 @@ export default function ExerciseLibrary() {
           numColumns={2}
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={{ padding: 16, gap: 12 }}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={{ marginBottom: 12, gap: 10 }}>
               <TextInput
@@ -120,6 +121,7 @@ export default function ExerciseLibrary() {
           data={filteredBundles}
           keyExtractor={(b) => b.id}
           contentContainerStyle={{ padding: 16, gap: 12 }}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={{ marginBottom: 12, gap: 10 }}>
               <TextInput

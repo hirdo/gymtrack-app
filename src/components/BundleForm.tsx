@@ -1,6 +1,6 @@
 // RN port of gymtrack-web's ExerciseBundleCreateComponent (admin-only).
 import { useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "../core/auth/authStore";
 import { useExercises } from "../hooks/useExercises";
@@ -8,6 +8,7 @@ import { addBundle, updateBundle } from "../core/services/exercise-bundle.servic
 import { getExerciseById } from "../core/services/exercise-library.service";
 import type { ExerciseBundle } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
+import { ZoomableThumbnail } from "./ZoomableThumbnail";
 import { colors, fonts } from "../core/theme/tokens";
 
 interface BundleFormProps {
@@ -46,7 +47,11 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 16 }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={{ padding: 16, gap: 16 }}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={{ gap: 6 }}>
         <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>Bundle Name</Text>
         <TextInput
@@ -64,7 +69,9 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
           onPress={() => setMainPickerOpen(true)}
           style={{ backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
         >
-          {mainExercise?.imageUrl ? <Image source={{ uri: mainExercise.imageUrl }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} /> : null}
+          {mainExercise?.imageUrl ? (
+            <ZoomableThumbnail uri={mainExercise.imageUrl} alt={mainExercise.name} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
+          ) : null}
           <Text style={{ flex: 1, color: mainExercise ? colors.text : colors.textMuted, fontFamily: fonts.body, fontSize: 14 }}>
             {mainExercise?.name ?? "Choose main exercise…"}
           </Text>
@@ -79,7 +86,9 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
             const alt = getExerciseById(exercises, altId);
             return (
               <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.surface, borderRadius: 8, paddingLeft: 4, paddingRight: 8, paddingVertical: 4 }}>
-                {alt?.imageUrl ? <Image source={{ uri: alt.imageUrl }} style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: colors.text }} /> : null}
+                {alt?.imageUrl ? (
+                  <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: colors.text }} />
+                ) : null}
                 <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 12 }}>{alt?.name ?? "?"}</Text>
                 <Pressable onPress={() => setAlternativeIds((prev) => prev.filter((a) => a !== altId))}>
                   <Text style={{ color: colors.textMuted, fontSize: 12 }}>✕</Text>
