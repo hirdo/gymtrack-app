@@ -66,4 +66,11 @@ describe("WorkoutsList", () => {
     const { getByText } = await render(<WorkoutsList />);
     expect(getByText("No workouts yet")).toBeTruthy();
   });
+
+  it("shows a loading spinner instead of the empty state while the first snapshot is still loading", async () => {
+    mockUseWorkouts.mockReturnValue({ workouts: [], isLoading: true });
+    const { getByText, queryByText } = await render(<WorkoutsList />);
+    expect(getByText("Loading workouts...")).toBeTruthy();
+    expect(queryByText("No workouts yet")).toBeNull();
+  });
 });

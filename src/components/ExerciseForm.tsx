@@ -1,7 +1,7 @@
 // RN port of gymtrack-web's ExerciseCreateComponent (admin-only create/edit for the exercise
 // library). The one deferred-from-Phase-2 CRUD screen this migration plan promised for the
 // Admin phase.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Keyboard, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -10,6 +10,7 @@ import { addExercise, updateExercise, ALL_EQUIPMENT, ALL_MUSCLE_GROUPS } from ".
 import { uploadImage } from "../core/services/cloudinary.service";
 import type { Equipment, ExerciseTemplate, ExerciseTrackingType, MuscleGroup, TimeUnit, WorkoutCategory } from "../core/models/workout.model";
 import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
+import { parseLocaleFloat } from "../core/utils/number.util";
 import { Select } from "./Select";
 import { colors, fonts } from "../core/theme/tokens";
 
@@ -52,6 +53,14 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
       : null
   );
   const [recommendedDurationUnit, setRecommendedDurationUnit] = useState<TimeUnit>(editingExercise?.recommendedDurationUnit ?? "min");
+  const [recommendedRestTime, setRecommendedRestTime] = useState<number | null>(
+    editingExercise?.recommendedRestTime != null
+      ? editingExercise.recommendedRestTimeUnit === "sec"
+        ? editingExercise.recommendedRestTime
+        : editingExercise.recommendedRestTime / 60
+      : null
+  );
+  const [recommendedRestTimeUnit, setRecommendedRestTimeUnit] = useState<TimeUnit>(editingExercise?.recommendedRestTimeUnit ?? "min");
   const [instructions, setInstructions] = useState(editingExercise?.instructions ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(editingExercise?.imageUrl ?? null);
   const [pickedImage, setPickedImage] = useState<{ uri: string; name: string; type: string } | null>(null);
@@ -102,6 +111,9 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
             ? Math.round(recommendedDurationUnit === "sec" ? recommendedDuration : recommendedDuration * 60)
             : undefined,
         recommendedDurationUnit: trackingType === "duration" && recommendedDuration != null ? recommendedDurationUnit : undefined,
+        recommendedRestTime:
+          recommendedRestTime != null ? Math.round(recommendedRestTimeUnit === "sec" ? recommendedRestTime : recommendedRestTime * 60) : undefined,
+        recommendedRestTimeUnit: recommendedRestTime != null ? recommendedRestTimeUnit : undefined,
         instructions: instructions.trim() || undefined,
       };
 
@@ -124,7 +136,16 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
         }
       }
 
-      dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/exercises/[id]", params: { id: exerciseId } }));
+      if (isEditMode) {
+        // router.back() — not replace() — because this screen was reached via push() from the
+        // exercise detail screen, which is still stacked underneath us and will pick up the
+        // just-saved changes on its own via the live Firestore subscription. replace() would
+        // leave the pre-edit detail screen stacked underneath the new one, requiring Back to be
+        // pressed twice to actually leave.
+        dismissKeyboardThenNavigate(() => router.back());
+      } else {
+        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/exercises/[id]", params: { id: exerciseId } }));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -200,6 +221,15 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
         </View>
       )}
 
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <NumField
+          label={`Recommended Rest Time (${recommendedRestTimeUnit})`}
+          value={recommendedRestTime}
+          onChange={setRecommendedRestTime}
+          onLabelPress={() => setRecommendedRestTimeUnit((u) => (u === "sec" ? "min" : "sec"))}
+        />
+      </View>
+
       <View style={{ gap: 6 }}>
         <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>Instructions (optional)</Text>
         <TextInput
@@ -229,14 +259,34 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
 }
 
 function NumField({ label, value, onChange, onLabelPress }: { label: string; value: number | null; onChange: (v: number | null) => void; onLabelPress?: () => void }) {
+  // Local text state, not a direct String(value) derivation: re-deriving the displayed text
+  // from the parsed number on every keystroke stripped a trailing decimal separator the moment
+  // it was typed (typing "7," immediately collapsed back to "7", so the "5" that followed landed
+  // as "75"). Only resync from an external value change, not from our own onChange.
+  const [text, setText] = useState(value === null ? "" : String(value));
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncing the editable text buffer from an external value change (e.g. switching tracking type resets fields), not a render-time derivation; our own onChange→setState round-trip is a no-op here since it only fires when the parsed number actually changes
+    setText(value === null ? "" : String(value));
+  }, [value]);
+
+  function handleChangeText(t: string) {
+    setText(t);
+    if (t.trim() === "") {
+      onChange(null);
+      return;
+    }
+    const parsed = parseLocaleFloat(t);
+    if (!Number.isNaN(parsed)) onChange(parsed);
+  }
+
   return (
     <View style={{ flex: 1, gap: 4 }}>
       <Pressable onPress={onLabelPress} disabled={!onLabelPress}>
         <Text style={{ color: onLabelPress ? colors.primary : colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "uppercase" }}>{label}</Text>
       </Pressable>
       <TextInput
-        value={value === null ? "" : String(value)}
-        onChangeText={(t) => onChange(t === "" ? null : Number(t))}
+        value={text}
+        onChangeText={handleChangeText}
         keyboardType="decimal-pad"
         placeholder="0"
         placeholderTextColor={colors.textMuted}

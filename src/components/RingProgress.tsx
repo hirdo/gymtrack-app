@@ -4,6 +4,7 @@
 // module with no worklets/JSI setup, is listed in Expo's bundledNativeModules for this SDK, and
 // is covered by a jest-expo render test (see __tests__/RingProgress.test.tsx) that would catch
 // an import-time native-module failure the same way that one caught the reanimated crash.
+import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { colors, fonts } from "../core/theme/tokens";
@@ -15,6 +16,8 @@ interface RingProgressProps {
   color?: string;
   trackColor?: string;
   showLabel?: boolean;
+  // Custom center content (e.g. a countdown like "0:45") in place of the default "N%" label.
+  children?: ReactNode;
 }
 
 export function RingProgress({
@@ -24,6 +27,7 @@ export function RingProgress({
   color = colors.accent,
   trackColor = colors.background,
   showLabel = true,
+  children,
 }: RingProgressProps) {
   const clamped = Math.max(0, Math.min(100, percent));
   const radius = (size - strokeWidth) / 2;
@@ -46,9 +50,11 @@ export function RingProgress({
           strokeLinecap="round"
         />
       </Svg>
-      {showLabel ? (
-        <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: size * 0.26 }}>{clamped}%</Text>
-      ) : null}
+      {children !== undefined
+        ? children
+        : showLabel ? (
+            <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: size * 0.26 }}>{clamped}%</Text>
+          ) : null}
     </View>
   );
 }

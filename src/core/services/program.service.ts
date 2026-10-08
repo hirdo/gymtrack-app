@@ -16,7 +16,11 @@ export function sortProgramsByUpdated(programs: TrainingProgram[]): TrainingProg
 }
 
 export function getVisiblePrograms(programs: TrainingProgram[], isAdmin: boolean): TrainingProgram[] {
-  return isAdmin ? programs : programs.filter((p) => p.isActive);
+  if (!isAdmin) return programs.filter((p) => p.isActive);
+  // Admins see drafts too — list published programs first so the ones members can actually
+  // choose aren't buried under drafts-in-progress. sortProgramsByUpdated() already ran in
+  // usePrograms(), so this only reorders by publish state, preserving recency within each group.
+  return [...programs].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 }
 
 // The workout that defines the user's currently active program run: any not-yet-completed

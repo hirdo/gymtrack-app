@@ -4,12 +4,21 @@ import { usePrograms } from "../../../hooks/usePrograms";
 import { useAuth } from "../../../hooks/useAuth";
 import { getVisiblePrograms } from "../../../core/services/program.service";
 import { PROGRAM_DIFFICULTIES, difficultyLabel } from "../../../core/models/workout.model";
+import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { colors, fonts } from "../../../core/theme/tokens";
 
 export default function ProgramList() {
-  const { programs } = usePrograms();
+  const { programs, isLoading } = usePrograms();
   const { isAdmin } = useAuth();
   const visible = getVisiblePrograms(programs, isAdmin);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <LoadingSpinner label="Loading programs..." />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

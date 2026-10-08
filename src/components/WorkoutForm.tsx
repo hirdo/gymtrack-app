@@ -9,7 +9,7 @@
 // JS dependencies. Being present in node_modules doesn't mean the matching native module is
 // actually initialized — a lesson learned the hard way; don't reintroduce this dependency
 // without first proving a real render works on-device.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Keyboard, Pressable, Text, TextInput, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
 import { router } from "expo-router";
@@ -21,6 +21,7 @@ import { getExerciseById } from "../core/services/exercise-library.service";
 import { toLocalDateString } from "../core/utils/date.util";
 import { uid } from "../core/utils/id.util";
 import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
+import { parseLocaleFloat } from "../core/utils/number.util";
 import type { Exercise, ExerciseTemplate, ExerciseTrackingType, TimeUnit, Workout, WorkoutCategory } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
 import { DatePickerField } from "./DatePickerField";
@@ -237,7 +238,13 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
             exercises,
           });
         }
-        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/workouts/[id]", params: { id: editingWorkout.id } }));
+        // router.back() — not replace() — because this screen was reached via push() from the
+        // workout detail screen, which is still sitting underneath us in the stack and will
+        // pick up the just-saved changes on its own via the live Firestore subscription.
+        // replace() would swap only this "edit" entry, leaving the pre-edit detail screen
+        // stacked underneath the new one — two copies of the same screen, so Back had to be
+        // pressed twice to actually leave.
+        dismissKeyboardThenNavigate(() => router.back());
       } else {
         const workout = await addWorkout(userId, {
           name: name.trim(),
@@ -515,6 +522,26 @@ function NumField({
   disabled?: boolean;
   onLabelPress?: () => void;
 }) {
+  // Local text state, not a direct String(value) derivation: re-deriving the displayed text
+  // from the parsed number on every keystroke stripped a trailing decimal separator the moment
+  // it was typed (typing "7," immediately collapsed back to "7", so the "5" that followed landed
+  // as "75"). Only resync from an external value change, not from our own onChange.
+  const [text, setText] = useState(value === null ? "" : String(value));
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncing the editable text buffer from an external value change (e.g. switching tracking type resets fields), not a render-time derivation; our own onChange→setState round-trip is a no-op here since it only fires when the parsed number actually changes
+    setText(value === null ? "" : String(value));
+  }, [value]);
+
+  function handleChangeText(t: string) {
+    setText(t);
+    if (t.trim() === "") {
+      onChange(null);
+      return;
+    }
+    const parsed = parseLocaleFloat(t);
+    if (!Number.isNaN(parsed)) onChange(parsed);
+  }
+
   return (
     <View style={{ flex: 1, gap: 4 }}>
       <Pressable onPress={onLabelPress} disabled={!onLabelPress}>
@@ -523,8 +550,8 @@ function NumField({
         </Text>
       </Pressable>
       <TextInput
-        value={value === null ? "" : String(value)}
-        onChangeText={(t) => onChange(t === "" ? null : Number(t))}
+        value={text}
+        onChangeText={handleChangeText}
         editable={!disabled}
         keyboardType="decimal-pad"
         placeholder="0"

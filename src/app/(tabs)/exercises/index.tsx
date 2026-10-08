@@ -14,6 +14,7 @@ import { searchBundles } from "../../../core/services/exercise-bundle.service";
 import type { Equipment, ExerciseBundle, ExerciseTemplate, MuscleGroup } from "../../../core/models/workout.model";
 import { Select } from "../../../components/Select";
 import { ZoomableThumbnail } from "../../../components/ZoomableThumbnail";
+import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { colors, fonts } from "../../../core/theme/tokens";
 
 const MUSCLE_OPTIONS = ALL_MUSCLE_GROUPS.map((m) => ({ value: m, label: m }));
@@ -32,7 +33,7 @@ export default function ExerciseLibrary() {
   const [activeTab, setActiveTab] = useState<"exercises" | "bundles">("exercises");
   const { isAdmin } = useAuth();
 
-  const { exercises } = useExercises();
+  const { exercises, isLoading } = useExercises();
   const { bundles } = useExerciseBundles();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,6 +59,14 @@ export default function ExerciseLibrary() {
     }
     return results;
   }, [bundles, bundleSearchQuery, selectedBundleMuscle, exercises]);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <LoadingSpinner label="Loading exercises..." />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

@@ -30,8 +30,10 @@ import {
 import { markWorkoutComplete } from "../../../../core/services/workout.service";
 import { useAuthStore } from "../../../../core/auth/authStore";
 import { formatDisplayDate, formatTime, parseLocalDate } from "../../../../core/utils/date.util";
+import { parseLocaleFloat } from "../../../../core/utils/number.util";
 import type { ExerciseLog, SetRecord } from "../../../../core/models/workout.model";
 import { ZoomableThumbnail } from "../../../../components/ZoomableThumbnail";
+import { RingProgress } from "../../../../components/RingProgress";
 import { colors, fonts } from "../../../../core/theme/tokens";
 
 const DEFAULT_REST_SECONDS = 120;
@@ -55,12 +57,32 @@ function NumberField({
   onChange: (v: number | null) => void;
   placeholder?: string;
 }) {
+  // Local text state, not a direct String(value) derivation: re-deriving the displayed text
+  // from the parsed number on every keystroke stripped a trailing decimal separator the moment
+  // it was typed (typing "7," immediately collapsed back to "7", so the "5" that followed landed
+  // as "75"). Only resync from an external value change, not from our own onChange.
+  const [text, setText] = useState(value === null ? "" : String(value));
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncing the editable text buffer from an external value change (e.g. switching sets/exercises), not a render-time derivation; our own onChange→setState round-trip is a no-op here since it only fires when the parsed number actually changes
+    setText(value === null ? "" : String(value));
+  }, [value]);
+
+  function handleChangeText(t: string) {
+    setText(t);
+    if (t.trim() === "") {
+      onChange(null);
+      return;
+    }
+    const parsed = parseLocaleFloat(t);
+    if (!Number.isNaN(parsed)) onChange(parsed);
+  }
+
   return (
     <View style={{ flex: 1, gap: 4 }}>
       <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>{label}</Text>
       <TextInput
-        value={value === null ? "" : String(value)}
-        onChangeText={(t) => onChange(t === "" ? null : Number(t))}
+        value={text}
+        onChangeText={handleChangeText}
         keyboardType="decimal-pad"
         placeholder={placeholder ?? "0"}
         placeholderTextColor={colors.textMuted}
@@ -96,6 +118,7 @@ export default function WorkoutTrain() {
   const [completing, setCompleting] = useState(false);
   const [activeLogId, setActiveLogId] = useState<Record<number, string>>({});
   const [altSwapOpen, setAltSwapOpen] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   const [editingSet, setEditingSet] = useState<{ logId: string; setNumber: number } | null>(null);
   const [editWeightInput, setEditWeightInput] = useState<number | null>(null);
@@ -331,6 +354,7 @@ export default function WorkoutTrain() {
   function navigateExercise(index: number) {
     setCurrentExerciseIndex(index);
     setAltSwapOpen(false);
+    setHistoryExpanded(false);
     resetForNewSlot();
   }
 
@@ -563,12 +587,9 @@ export default function WorkoutTrain() {
               {restJustFinished ? (
                 <Text style={{ color: colors.warning, fontFamily: fonts.heading, fontSize: 24 }}>Let&apos;s go!</Text>
               ) : (
-                <>
-                  <Text style={{ color: colors.warning, fontFamily: fonts.heading, fontSize: 32 }}>{formatTime(restSeconds)}</Text>
-                  <View style={{ width: "100%" }}>
-                    <ProgressBar percent={(restSeconds / (restTotalSeconds || 1)) * 100} color={colors.warning} />
-                  </View>
-                </>
+                <RingProgress percent={(restSeconds / (restTotalSeconds || 1)) * 100} size={140} strokeWidth={10} color={colors.warning} trackColor={colors.background}>
+                  <Text style={{ color: colors.warning, fontFamily: fonts.heading, fontSize: 28 }}>{formatTime(restSeconds)}</Text>
+                </RingProgress>
               )}
               <Pressable onPress={skipRest} style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
                 <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13 }}>Skip Rest</Text>
@@ -696,27 +717,37 @@ export default function WorkoutTrain() {
 
           {currentExerciseHistory.length > 0 ? (
             <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: colors.secondary, paddingTop: 12 }}>
-              <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>History</Text>
-              {currentExerciseHistory.map((entry) => (
-                <View key={entry.date} style={{ backgroundColor: colors.background, borderRadius: 8, padding: 10, gap: 6 }}>
-                  <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
-                    {formatDisplayDate(parseLocalDate(entry.date))}
-                  </Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-                    {entry.sets.map((set) => (
-                      <View key={set.setNumber} style={{ backgroundColor: colors.surface, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
-                        <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 11 }}>
-                          {currentLog.trackingType === "duration"
-                            ? formatTime(set.duration ?? 0)
-                            : currentLog.trackingType === "reps_only"
-                              ? `${set.reps} reps`
-                              : `${set.weight}kg × ${set.reps}`}
-                        </Text>
+              <Pressable
+                onPress={() => setHistoryExpanded((e) => !e)}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+              >
+                <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11, textTransform: "uppercase" }}>
+                  History ({currentExerciseHistory.length})
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: 12 }}>{historyExpanded ? "▲ Hide" : "▼ Show"}</Text>
+              </Pressable>
+              {historyExpanded
+                ? currentExerciseHistory.map((entry) => (
+                    <View key={entry.date} style={{ backgroundColor: colors.background, borderRadius: 8, padding: 10, gap: 6 }}>
+                      <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
+                        {formatDisplayDate(parseLocalDate(entry.date))}
+                      </Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                        {entry.sets.map((set) => (
+                          <View key={set.setNumber} style={{ backgroundColor: colors.surface, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 }}>
+                            <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 11 }}>
+                              {currentLog.trackingType === "duration"
+                                ? formatTime(set.duration ?? 0)
+                                : currentLog.trackingType === "reps_only"
+                                  ? `${set.reps} reps`
+                                  : `${set.weight}kg × ${set.reps}`}
+                            </Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
-                  </View>
-                </View>
-              ))}
+                    </View>
+                  ))
+                : null}
             </View>
           ) : null}
         </View>

@@ -7,12 +7,14 @@ import { PROGRAMS_COLLECTION, sortProgramsByUpdated } from "../core/services/pro
 
 export function usePrograms() {
   const [programs, setPrograms] = useState<TrainingProgram[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     return subscribe<TrainingProgram>(PROGRAMS_COLLECTION, (docs) => {
       setPrograms(sortProgramsByUpdated(docs));
+      setIsLoading(false);
     });
   }, []);
 
-  return { programs };
+  return { programs, isLoading };
 }

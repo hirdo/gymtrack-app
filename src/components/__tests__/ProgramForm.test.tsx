@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { fireEvent, render } from "@testing-library/react-native";
 import { Keyboard } from "react-native";
 import { ProgramForm } from "../ProgramForm";
+import { Toast } from "../Toast";
 import { useExercises } from "../../hooks/useExercises";
 import { useExerciseBundles } from "../../hooks/useExerciseBundles";
 import { useAuthStore } from "../../core/auth/authStore";
@@ -92,7 +93,33 @@ describe("ProgramForm edit mode", () => {
     await fireEvent.press(getByText("Cancel"));
     expect(dismissSpy).toHaveBeenCalled();
     expect(router.back).not.toHaveBeenCalled();
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     expect(router.back).toHaveBeenCalled();
+  });
+
+  // Regression test for a reported "Back has to be pressed twice" bug: this screen is reached
+  // via push() from the program detail screen, so saving must go back() (popping this screen off,
+  // leaving exactly one detail screen underneath) rather than replace() (which would leave the
+  // pre-edit detail screen stacked underneath a second, newly-pushed copy of it).
+  it("navigates back (not replace) after saving in edit mode", async () => {
+    const { getByText } = await render(<ProgramForm editingProgram={editingProgram} />);
+    await fireEvent.press(getByText("Save Changes"));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(router.back).toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  // Regression test: Duplicate Day appended a new day at the far end of the horizontal day-tabs
+  // scroller with no other visible change, so there was no signal the action had actually done
+  // anything. It must now flash a confirmation toast.
+  it("shows a toast confirmation after duplicating a day", async () => {
+    const { getByText } = await render(
+      <>
+        <ProgramForm editingProgram={editingProgram} />
+        <Toast />
+      </>
+    );
+    await fireEvent.press(getByText("Duplicate"));
+    expect(getByText(/Duplicated "Push" as Day 3/)).toBeTruthy();
   });
 });

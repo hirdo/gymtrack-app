@@ -7,9 +7,10 @@
 // hit the exact same failure at import time), despite reanimated/gesture-handler being present
 // as JS dependencies. Don't reintroduce this dependency without first proving a real render
 // works on-device.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Keyboard, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import type { ListRenderItemInfo } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useExercises } from "../hooks/useExercises";
 import { useAuthStore } from "../core/auth/authStore";
@@ -17,6 +18,8 @@ import { createProgram, updateProgram } from "../core/services/program.service";
 import { getExerciseById } from "../core/services/exercise-library.service";
 import { uid } from "../core/utils/id.util";
 import { dismissKeyboardThenNavigate } from "../core/utils/keyboard.util";
+import { useToastStore } from "../core/ui/toastStore";
+import { parseLocaleFloat } from "../core/utils/number.util";
 import { PROGRAM_DIFFICULTIES } from "../core/models/workout.model";
 import type { ExerciseBundle, ExerciseTemplate, ExerciseTrackingType, ProgramDay, ProgramDifficulty, TimeUnit, TrainingProgram } from "../core/models/workout.model";
 import { ExercisePickerModal } from "./ExercisePickerModal";
@@ -101,6 +104,7 @@ interface ProgramFormProps {
 export function ProgramForm({ editingProgram }: ProgramFormProps) {
   const { exercises: libraryExercises } = useExercises();
   const userId = useAuthStore((s) => s.userId);
+  const showToast = useToastStore((s) => s.show);
   const isEditMode = !!editingProgram;
 
   const [name, setName] = useState(editingProgram?.name ?? "");
@@ -151,6 +155,9 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
       exercises: source.exercises.map((e) => ({ ...e, rowId: uid() })),
     };
     setDays((prev) => [...prev, clone]);
+    // The new day lands at the far end of the horizontal day-tabs scroller — easy to miss — so
+    // flash a confirmation that the duplicate was actually created.
+    showToast(`Duplicated "${source.name || "Untitled day"}" as Day ${days.length + 1}`);
   }
 
   // Copies Day `duplicateRangeStart`..`duplicateRangeEnd` as a new block appended to the end,
@@ -166,6 +173,7 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
       exercises: d.exercises.map((e) => ({ ...e, rowId: uid() })),
     }));
     setDays((prev) => [...prev, ...clones]);
+    showToast(`Duplicated Day ${duplicateRangeStart}-${duplicateRangeEnd} as ${clones.length} new day${clones.length === 1 ? "" : "s"}`);
   }
 
   function addExerciseToCurrentDay() {
@@ -305,7 +313,12 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
           sessionsPerWeek,
           days: builtDays,
         });
-        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/programs/[id]", params: { id: editingProgram.id } }));
+        // router.back() — not replace() — because this screen was reached via push() from the
+        // program detail screen, which is still stacked underneath us and will pick up the
+        // just-saved changes on its own via the live Firestore subscription. replace() would
+        // leave the pre-edit detail screen stacked underneath the new one, requiring Back to be
+        // pressed twice to actually leave.
+        dismissKeyboardThenNavigate(() => router.back());
       } else {
         if (!userId) return;
         const program = await createProgram(
@@ -374,9 +387,9 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
             </View>
             <Pressable
               onPress={() => setBundlePickerTarget(row.rowId)}
-              style={{ backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, alignItems: "center", justifyContent: "center" }}
+              style={{ width: 42, backgroundColor: colors.background, borderRadius: 10, alignItems: "center", justifyContent: "center" }}
             >
-              <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemiBold, fontSize: 11 }}>Use{"\n"}Bundle</Text>
+              <Ionicons name="layers-outline" size={18} color={colors.textMuted} />
             </Pressable>
           </View>
           {!row.exerciseName.trim() ? (
@@ -647,6 +660,26 @@ function NumField({
   onChange: (v: number | null) => void;
   onLabelPress?: () => void;
 }) {
+  // Local text state, not a direct String(value) derivation: re-deriving the displayed text
+  // from the parsed number on every keystroke stripped a trailing decimal separator the moment
+  // it was typed (typing "7," immediately collapsed back to "7", so the "5" that followed landed
+  // as "75"). Only resync from an external value change, not from our own onChange.
+  const [text, setText] = useState(value === null ? "" : String(value));
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- resyncing the editable text buffer from an external value change (e.g. switching exercises/days resets fields), not a render-time derivation; our own onChange→setState round-trip is a no-op here since it only fires when the parsed number actually changes
+    setText(value === null ? "" : String(value));
+  }, [value]);
+
+  function handleChangeText(t: string) {
+    setText(t);
+    if (t.trim() === "") {
+      onChange(null);
+      return;
+    }
+    const parsed = parseLocaleFloat(t);
+    if (!Number.isNaN(parsed)) onChange(parsed);
+  }
+
   return (
     <View style={{ flex: 1, gap: 4 }}>
       <Pressable onPress={onLabelPress} disabled={!onLabelPress}>
@@ -655,8 +688,8 @@ function NumField({
         </Text>
       </Pressable>
       <TextInput
-        value={value === null ? "" : String(value)}
-        onChangeText={(t) => onChange(t === "" ? null : Number(t))}
+        value={text}
+        onChangeText={handleChangeText}
         keyboardType="decimal-pad"
         placeholder="0"
         placeholderTextColor={colors.textMuted}

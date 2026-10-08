@@ -14,6 +14,7 @@ import { difficultyLabel, PROGRAM_DIFFICULTIES } from "../../core/models/workout
 import type { ExerciseLog, Workout } from "../../core/models/workout.model";
 import { formatDisplayDate } from "../../core/utils/date.util";
 import { RingProgress } from "../../components/RingProgress";
+import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { colors, fonts } from "../../core/theme/tokens";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -52,8 +53,8 @@ function workoutCompletionPercent(workout: Workout, logs: ExerciseLog[]): number
 }
 
 export default function Dashboard() {
-  const { workouts, streak, thisWeekCount, totalWorkouts, completedWorkouts, recent } = useWorkouts();
-  const { programs } = usePrograms();
+  const { workouts, isLoading: workoutsLoading, streak, thisWeekCount, totalWorkouts, completedWorkouts, recent } = useWorkouts();
+  const { programs, isLoading: programsLoading } = usePrograms();
   const { profile } = useProfile();
   const { logs } = useExerciseLogs();
 
@@ -67,6 +68,14 @@ export default function Dashboard() {
       ? Math.min(100, Math.round((activeProgramCompletedDays / activeProgram.totalDays) * 100))
       : 0;
   const activeProgramStars = activeProgram ? PROGRAM_DIFFICULTIES.find((d) => d.value === activeProgram.difficulty)?.stars ?? 0 : 0;
+
+  if (workoutsLoading || programsLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <LoadingSpinner label="Loading your dashboard..." />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 18 }}>

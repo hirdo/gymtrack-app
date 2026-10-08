@@ -14,6 +14,7 @@ import { useFonts as useBarlowCondensedFonts, BarlowCondensed_700Bold } from "@e
 import { colors } from "../core/theme/tokens";
 import { useAuthStore } from "../core/auth/authStore";
 import { ImageLightbox } from "../components/ImageLightbox";
+import { Toast } from "../components/Toast";
 
 // Required once at app startup so a pending auth session (opened via WebBrowser) can be
 // completed when the OS redirects back into the app.
@@ -62,6 +63,7 @@ export default function RootLayout() {
         <Stack.Screen name="membership" options={{ title: "Membership" }} />
       </Stack>
       <ImageLightbox />
+      <Toast />
     </View>
   );
 }

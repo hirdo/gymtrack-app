@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useWorkouts } from "../../../../hooks/useWorkouts";
 import { useExerciseLogs } from "../../../../hooks/useExerciseLogs";
@@ -9,6 +10,17 @@ import { deleteLogsForWorkout, logsForWorkout, startWorkoutLogs } from "../../..
 import { formatDisplayDate } from "../../../../core/utils/date.util";
 import { ZoomableThumbnail } from "../../../../components/ZoomableThumbnail";
 import { colors, fonts } from "../../../../core/theme/tokens";
+
+function IconButton({ icon, color, onPress }: { icon: keyof typeof Ionicons.glyphMap; color: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" }}
+    >
+      <Ionicons name={icon} size={18} color={color} />
+    </Pressable>
+  );
+}
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -59,7 +71,7 @@ export default function WorkoutDetail() {
     try {
       await deleteLogsForWorkout(logs, workout.id);
       await deleteWorkout(workout.id);
-      router.replace("/(tabs)/workouts");
+      router.back();
     } finally {
       setIsDeleting(false);
     }
@@ -67,16 +79,47 @@ export default function WorkoutDetail() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <Text style={{ color: colors.text, fontFamily: fonts.heading, fontSize: 26 }}>{workout.name}</Text>
-      {workout.description ? (
-        <Text style={{ color: colors.textMuted, fontFamily: fonts.body }}>{workout.description}</Text>
-      ) : null}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <Text style={{ color: colors.text, fontFamily: fonts.heading, fontSize: 26 }}>{workout.name}</Text>
+          {workout.description ? (
+            <Text style={{ color: colors.textMuted, fontFamily: fonts.body }}>{workout.description}</Text>
+          ) : null}
+          <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13 }}>
+            {workout.completedDate
+              ? `Completed ${formatDisplayDate(new Date(workout.completedDate))}`
+              : "Not completed yet"}
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {!workout.completedDate && !hasBeenTrained ? (
+            <IconButton
+              icon="pencil-outline"
+              color={colors.text}
+              onPress={() => router.push({ pathname: "/(tabs)/workouts/[id]/edit", params: { id: workout.id } })}
+            />
+          ) : null}
+          {!workout.programId ? (
+            <IconButton icon="trash-outline" color={colors.error} onPress={() => setConfirmingDelete(true)} />
+          ) : null}
+        </View>
+      </View>
 
-      <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13 }}>
-        {workout.completedDate
-          ? `Completed ${formatDisplayDate(new Date(workout.completedDate))}`
-          : "Not completed yet"}
-      </Text>
+      {confirmingDelete ? (
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center", backgroundColor: colors.surface, borderRadius: 12, padding: 12 }}>
+          <Text style={{ color: colors.error, fontFamily: fonts.bodySemiBold, fontSize: 13, flex: 1 }}>Delete this workout?</Text>
+          <Pressable
+            disabled={isDeleting}
+            onPress={handleDelete}
+            style={{ backgroundColor: colors.error, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, opacity: isDeleting ? 0.6 : 1 }}
+          >
+            {isDeleting ? <ActivityIndicator color={colors.text} /> : <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Confirm</Text>}
+          </Pressable>
+          <Pressable disabled={isDeleting} onPress={() => setConfirmingDelete(false)} style={{ backgroundColor: colors.background, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 }}>
+            <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Cancel</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {!workout.completedDate ? (
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -100,12 +143,28 @@ export default function WorkoutDetail() {
               </Text>
             )}
           </Pressable>
-          {!hasBeenTrained ? (
+          {/* Guarded by !isStarting: starting a never-trained workout writes its exercise logs
+              before navigating to Train, and the live Firestore subscription can flip
+              hasBeenTrained to true a moment before the navigation transition finishes — without
+              this guard, the Complete button flashed on screen for an instant during that gap. */}
+          {hasBeenTrained && !isStarting ? (
             <Pressable
-              onPress={() => router.push({ pathname: "/(tabs)/workouts/[id]/edit", params: { id: workout.id } })}
-              style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 14, paddingHorizontal: 20, alignItems: "center" }}
+              disabled={isCompleting}
+              onPress={handleMarkComplete}
+              style={{
+                flex: 1,
+                backgroundColor: colors.accent,
+                paddingVertical: 14,
+                borderRadius: 10,
+                alignItems: "center",
+                opacity: isCompleting ? 0.6 : 1,
+              }}
             >
-              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>Edit</Text>
+              {isCompleting ? (
+                <ActivityIndicator color={colors.text} />
+              ) : (
+                <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>Complete</Text>
+              )}
             </Pressable>
           ) : null}
         </View>
@@ -163,48 +222,6 @@ export default function WorkoutDetail() {
           );
         })}
       </View>
-
-      {!workout.completedDate && hasBeenTrained ? (
-        <Pressable
-          disabled={isCompleting}
-          onPress={handleMarkComplete}
-          style={{
-            backgroundColor: colors.accent,
-            paddingVertical: 14,
-            borderRadius: 10,
-            alignItems: "center",
-            opacity: isCompleting ? 0.6 : 1,
-          }}
-        >
-          {isCompleting ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 16 }}>Complete</Text>
-          )}
-        </Pressable>
-      ) : null}
-
-      {!workout.programId ? (
-        confirmingDelete ? (
-          <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-            <Text style={{ color: colors.error, fontFamily: fonts.bodySemiBold, fontSize: 13, flex: 1 }}>Delete this workout?</Text>
-            <Pressable
-              disabled={isDeleting}
-              onPress={handleDelete}
-              style={{ backgroundColor: colors.error, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14, opacity: isDeleting ? 0.6 : 1 }}
-            >
-              {isDeleting ? <ActivityIndicator color={colors.text} /> : <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Confirm</Text>}
-            </Pressable>
-            <Pressable disabled={isDeleting} onPress={() => setConfirmingDelete(false)} style={{ backgroundColor: colors.surface, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 }}>
-              <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }}>Cancel</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <Pressable onPress={() => setConfirmingDelete(true)} style={{ alignSelf: "flex-start" }}>
-            <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 13 }}>Delete workout</Text>
-          </Pressable>
-        )
-      ) : null}
     </ScrollView>
   );
 }

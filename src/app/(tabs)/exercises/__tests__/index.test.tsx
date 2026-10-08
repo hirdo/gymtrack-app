@@ -72,4 +72,12 @@ describe("ExerciseLibrary Bundles tab", () => {
     await fireEvent.press(getByText("Bundles"));
     expect(getByText(/No bundles match/)).toBeTruthy();
   });
+
+  it("shows a loading spinner instead of the exercise grid while the first snapshot is still loading", async () => {
+    mockUseExercises.mockReturnValue({ exercises: [], isLoading: true, muscleGroups: [], equipmentTypes: [] });
+    mockUseExerciseBundles.mockReturnValue({ bundles: [] });
+    const { getByText, queryByText } = await render(<ExerciseLibrary />);
+    expect(getByText("Loading exercises...")).toBeTruthy();
+    expect(queryByText("Bench Press")).toBeNull();
+  });
 });

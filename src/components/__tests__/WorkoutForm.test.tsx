@@ -81,7 +81,19 @@ describe("WorkoutForm edit mode", () => {
     await fireEvent.press(getByText("Cancel"));
     expect(dismissSpy).toHaveBeenCalled();
     expect(router.back).not.toHaveBeenCalled();
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     expect(router.back).toHaveBeenCalled();
+  });
+
+  // Regression test for a reported "Back has to be pressed twice" bug: this screen is reached
+  // via push() from the workout detail screen, so saving must go back() (popping this screen off,
+  // leaving exactly one detail screen underneath) rather than replace() (which would leave the
+  // pre-edit detail screen stacked underneath a second, newly-pushed copy of it).
+  it("navigates back (not replace) after saving in edit mode", async () => {
+    const { getByText } = await render(<WorkoutForm editingWorkout={editingWorkout} />);
+    await fireEvent.press(getByText("Save Changes"));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(router.back).toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
   });
 });

@@ -8,6 +8,7 @@ import { useWorkouts } from "../../../hooks/useWorkouts";
 import { getUserActiveWorkout } from "../../../core/services/program.service";
 import { formatDisplayDate, parseLocalDate } from "../../../core/utils/date.util";
 import type { Workout, WorkoutCategory } from "../../../core/models/workout.model";
+import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { colors, fonts } from "../../../core/theme/tokens";
 
 const CATEGORIES: { value: WorkoutCategory | "all"; label: string }[] = [
@@ -60,7 +61,7 @@ function WorkoutCard({ workout }: { workout: Workout }) {
 }
 
 export default function WorkoutsList() {
-  const { workouts } = useWorkouts();
+  const { workouts, isLoading } = useWorkouts();
   const [selectedCategory, setSelectedCategory] = useState<WorkoutCategory | "all">("all");
 
   const activeRunId = getUserActiveWorkout(workouts)?.programRunId;
@@ -86,6 +87,14 @@ export default function WorkoutsList() {
   );
 
   const isEmpty = programWorkouts.length === 0 && selfCreatedWorkouts.length === 0;
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <LoadingSpinner label="Loading workouts..." />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

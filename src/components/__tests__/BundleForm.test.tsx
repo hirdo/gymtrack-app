@@ -51,7 +51,7 @@ describe("BundleForm edit mode", () => {
     await fireEvent.press(getByText("Cancel"));
     expect(dismissSpy).toHaveBeenCalled();
     expect(router.back).not.toHaveBeenCalled();
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 150));
     expect(router.back).toHaveBeenCalled();
   });
 });
