@@ -16,6 +16,7 @@ import { useAuthStore } from "../core/auth/authStore";
 export function useWorkouts() {
   const userId = useAuthStore((s) => s.userId);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!userId) {
@@ -28,6 +29,7 @@ export function useWorkouts() {
       (docs) => {
         const sorted = [...docs].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
         setWorkouts(sorted);
+        setIsLoading(false);
       },
       where("userId", "==", userId)
     );
@@ -36,12 +38,13 @@ export function useWorkouts() {
   return useMemo(
     () => ({
       workouts,
+      isLoading,
       recent: computeRecent(workouts),
       streak: computeStreak(workouts),
       thisWeekCount: computeThisWeekCount(workouts),
       totalWorkouts: computeTotalWorkouts(workouts),
       completedWorkouts: computeCompletedWorkouts(workouts),
     }),
-    [workouts]
+    [workouts, isLoading]
   );
 }

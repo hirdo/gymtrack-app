@@ -12,19 +12,22 @@ import {
 
 export function useExercises() {
   const [exercises, setExercises] = useState<ExerciseTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     return subscribe<ExerciseTemplate>(EXERCISES_COLLECTION, (docs) => {
       setExercises(sortExercisesByName(docs));
+      setIsLoading(false);
     });
   }, []);
 
   return useMemo(
     () => ({
       exercises,
+      isLoading,
       muscleGroups: getMuscleGroups(exercises),
       equipmentTypes: getEquipmentTypes(exercises),
     }),
-    [exercises]
+    [exercises, isLoading]
   );
 }

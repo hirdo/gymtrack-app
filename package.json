@@ -5,6 +5,7 @@
   "dependencies": {
     "@expo-google-fonts/barlow": "^0.4.1",
     "@expo-google-fonts/barlow-condensed": "^0.4.1",
+    "@expo/vector-icons": "^15.1.1",
     "expo": "~57.0.26",
     "expo-auth-session": "^57.0.13",
     "expo-constants": "^57.0.20",
@@ -24,6 +25,7 @@
     "react-native-reanimated": "^4.7.1",
     "react-native-safe-area-context": "^5.10.1",
     "react-native-screens": "^4.28.0",
+    "react-native-svg": "^15.15.5",
     "react-native-web": "^0.21.3",
     "react-native-worklets": "^0.13.0",
     "tailwindcss": "^3.4.19",

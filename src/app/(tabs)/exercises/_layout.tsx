@@ -12,7 +12,11 @@ export default function ExercisesLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "Exercise Library" }} />
-      <Stack.Screen name="[id]" options={{ title: "Exercise" }} />
+      <Stack.Screen name="[id]/index" options={{ title: "Exercise" }} />
+      <Stack.Screen name="[id]/edit" options={{ title: "Edit Exercise", presentation: "modal" }} />
+      <Stack.Screen name="new" options={{ title: "New Exercise", presentation: "modal" }} />
+      <Stack.Screen name="bundles/new" options={{ title: "New Bundle", presentation: "modal" }} />
+      <Stack.Screen name="bundles/[id]/edit" options={{ title: "Edit Bundle", presentation: "modal" }} />
     </Stack>
   );
 }
