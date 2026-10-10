@@ -144,7 +144,16 @@ export function ExerciseForm({ editingExercise }: ExerciseFormProps) {
         // pressed twice to actually leave.
         dismissKeyboardThenNavigate(() => router.back());
       } else {
-        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/exercises/[id]", params: { id: exerciseId } }));
+        // back() to close this modal-presented "new exercise" screen, then push() the detail
+        // screen as a normal card over the exercise library list — not replace(). This screen
+        // is presented with `presentation: "modal"`; replace()-ing a modal screen's content
+        // with a plain pushed-card screen left the native modal/card presentation transitions
+        // fighting each other, causing a freeze and leaving the resulting screen without a
+        // Back button.
+        dismissKeyboardThenNavigate(() => {
+          router.back();
+          router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: exerciseId } });
+        });
       }
     } finally {
       setSubmitting(false);

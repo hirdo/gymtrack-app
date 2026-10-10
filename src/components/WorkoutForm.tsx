@@ -253,7 +253,18 @@ export function WorkoutForm({ editingWorkout }: WorkoutFormProps) {
           scheduledDate: scheduledDate ?? undefined,
           exercises,
         });
-        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/workouts/[id]", params: { id: workout.id } }));
+        // back() to close this modal-presented "new workout" screen, then push() the detail
+        // screen as a normal card over the workouts list — not replace(). This screen is
+        // presented with `presentation: "modal"` (see workouts/_layout.tsx); replace()-ing a
+        // modal screen's content with a plain pushed-card screen left the native modal and card
+        // presentation transitions fighting each other, which is what caused the reported
+        // freeze after creating a workout, and left the resulting detail screen without a Back
+        // button (it ended up as the "root" of a confused presentation context instead of a
+        // normal card pushed over the list).
+        dismissKeyboardThenNavigate(() => {
+          router.back();
+          router.push({ pathname: "/(tabs)/workouts/[id]", params: { id: workout.id } });
+        });
       }
     } finally {
       setSubmitting(false);

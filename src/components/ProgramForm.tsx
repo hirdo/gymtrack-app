@@ -335,7 +335,15 @@ export function ProgramForm({ editingProgram }: ProgramFormProps) {
           },
           userId
         );
-        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/programs/[id]", params: { id: program.id } }));
+        // back() to close this modal-presented "new program" screen, then push() the detail
+        // screen as a normal card over the programs list — not replace(). This screen is
+        // presented with `presentation: "modal"`; replace()-ing a modal screen's content with a
+        // plain pushed-card screen left the native modal/card presentation transitions fighting
+        // each other, causing a freeze and leaving the resulting screen without a Back button.
+        dismissKeyboardThenNavigate(() => {
+          router.back();
+          router.push({ pathname: "/(tabs)/programs/[id]", params: { id: program.id } });
+        });
       }
     } finally {
       setSubmitting(false);

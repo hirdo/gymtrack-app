@@ -45,7 +45,14 @@ export function BundleForm({ editingBundle }: BundleFormProps) {
         dismissKeyboardThenNavigate(() => router.back());
       } else {
         await addBundle({ name: name.trim(), mainExerciseId, alternativeExerciseIds: alternativeIds }, userId);
-        dismissKeyboardThenNavigate(() => router.replace({ pathname: "/(tabs)/exercises", params: { tab: "bundles" } }));
+        // back() — not replace() — because this screen was reached via push() from the
+        // exercises list (which is still mounted underneath, already showing the Bundles tab
+        // the user came from). replace() was remounting that list screen from scratch, which
+        // besides the modal/card presentation mismatch (freeze, missing Back button) also reset
+        // it back to the Exercises tab, since activeTab is local component state that a fresh
+        // mount doesn't preserve — the `tab` param it tried to pass isn't actually read by that
+        // screen. back() simply returns to the already-live instance, tab state intact.
+        dismissKeyboardThenNavigate(() => router.back());
       }
     } finally {
       setSubmitting(false);

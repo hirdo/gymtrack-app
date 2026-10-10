@@ -96,4 +96,23 @@ describe("WorkoutForm edit mode", () => {
     expect(router.back).toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
   });
+
+  // Regression test for a reported freeze + missing Back button right after creating a workout.
+  // The "new workout" screen is presented with `presentation: "modal"` (workouts/_layout.tsx);
+  // replace()-ing that modal screen's content with the plain pushed-card detail screen left the
+  // native modal/card transitions fighting each other. The fix is back() (closing the modal,
+  // returning to the list already underneath) immediately followed by push() of the detail
+  // screen as a normal card — never replace() across that modal boundary.
+  it("closes the modal and pushes the detail screen (not replace) after creating a workout", async () => {
+    mockUseWorkouts.mockReturnValue({ workouts: [] });
+    const { getByText, getByPlaceholderText } = await render(<WorkoutForm />);
+    await fireEvent.changeText(getByPlaceholderText("e.g. Push day"), "Leg Day");
+    await fireEvent.press(getByText("Choose exercise…"));
+    await fireEvent.press(getByText("Bench Press"));
+    await fireEvent.press(getByText("Create Workout"));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(router.back).toHaveBeenCalled();
+    expect(router.push).toHaveBeenCalledWith({ pathname: "/(tabs)/workouts/[id]", params: { id: "new-id" } });
+    expect(router.replace).not.toHaveBeenCalled();
+  });
 });
