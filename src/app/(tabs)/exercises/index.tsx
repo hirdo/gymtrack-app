@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { FlatList, Image, Pressable, Text, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { FlatList, Pressable, Text, TextInput, View } from "react-native";
+import { Link, router } from "expo-router";
 import { useExercises } from "../../../hooks/useExercises";
 import { useExerciseBundles } from "../../../hooks/useExerciseBundles";
+import { useAuth } from "../../../hooks/useAuth";
 import {
   ALL_EQUIPMENT,
   ALL_MUSCLE_GROUPS,
@@ -12,6 +13,8 @@ import {
 import { searchBundles } from "../../../core/services/exercise-bundle.service";
 import type { Equipment, ExerciseBundle, ExerciseTemplate, MuscleGroup } from "../../../core/models/workout.model";
 import { Select } from "../../../components/Select";
+import { ZoomableThumbnail } from "../../../components/ZoomableThumbnail";
+import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { colors, fonts } from "../../../core/theme/tokens";
 
 const MUSCLE_OPTIONS = ALL_MUSCLE_GROUPS.map((m) => ({ value: m, label: m }));
@@ -28,8 +31,9 @@ const searchInputStyle = {
 
 export default function ExerciseLibrary() {
   const [activeTab, setActiveTab] = useState<"exercises" | "bundles">("exercises");
+  const { isAdmin } = useAuth();
 
-  const { exercises } = useExercises();
+  const { exercises, isLoading } = useExercises();
   const { bundles } = useExerciseBundles();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,19 +60,38 @@ export default function ExerciseLibrary() {
     return results;
   }, [bundles, bundleSearchQuery, selectedBundleMuscle, exercises]);
 
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <LoadingSpinner label="Loading exercises..." />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ flexDirection: "row", gap: 8, padding: 16, paddingBottom: 0 }}>
-        <Pressable onPress={() => setActiveTab("exercises")} style={{ paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 2, borderBottomColor: activeTab === "exercises" ? colors.primary : "transparent" }}>
-          <Text style={{ color: activeTab === "exercises" ? colors.primary : colors.textMuted, fontFamily: fonts.heading, fontSize: 14, textTransform: "uppercase" }}>
-            Exercises
-          </Text>
-        </Pressable>
-        <Pressable onPress={() => setActiveTab("bundles")} style={{ paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 2, borderBottomColor: activeTab === "bundles" ? colors.primary : "transparent" }}>
-          <Text style={{ color: activeTab === "bundles" ? colors.primary : colors.textMuted, fontFamily: fonts.heading, fontSize: 14, textTransform: "uppercase" }}>
-            Bundles
-          </Text>
-        </Pressable>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 16 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable onPress={() => setActiveTab("exercises")} style={{ paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 2, borderBottomColor: activeTab === "exercises" ? colors.primary : "transparent" }}>
+            <Text style={{ color: activeTab === "exercises" ? colors.primary : colors.textMuted, fontFamily: fonts.heading, fontSize: 14, textTransform: "uppercase" }}>
+              Exercises
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => setActiveTab("bundles")} style={{ paddingVertical: 10, paddingHorizontal: 4, borderBottomWidth: 2, borderBottomColor: activeTab === "bundles" ? colors.primary : "transparent" }}>
+            <Text style={{ color: activeTab === "bundles" ? colors.primary : colors.textMuted, fontFamily: fonts.heading, fontSize: 14, textTransform: "uppercase" }}>
+              Bundles
+            </Text>
+          </Pressable>
+        </View>
+        {isAdmin ? (
+          <Link href={activeTab === "exercises" ? "/(tabs)/exercises/new" : "/(tabs)/exercises/bundles/new"} asChild>
+            <Pressable style={{ backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10 }}>
+              <Text style={{ color: colors.background, fontFamily: fonts.bodySemiBold, fontSize: 12 }}>
+                + {activeTab === "exercises" ? "Exercise" : "Bundle"}
+              </Text>
+            </Pressable>
+          </Link>
+        ) : null}
       </View>
 
       {activeTab === "exercises" ? (
@@ -79,6 +102,7 @@ export default function ExerciseLibrary() {
           numColumns={2}
           columnWrapperStyle={{ gap: 12 }}
           contentContainerStyle={{ padding: 16, gap: 12 }}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={{ marginBottom: 12, gap: 10 }}>
               <TextInput
@@ -107,6 +131,7 @@ export default function ExerciseLibrary() {
           data={filteredBundles}
           keyExtractor={(b) => b.id}
           contentContainerStyle={{ padding: 16, gap: 12 }}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View style={{ marginBottom: 12, gap: 10 }}>
               <TextInput
@@ -138,13 +163,21 @@ export default function ExerciseLibrary() {
 function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: ExerciseTemplate[] }) {
   const main = getExerciseById(exercises, bundle.mainExerciseId);
   const alternativeIds = bundle.alternativeExerciseIds ?? [];
+  const { isAdmin } = useAuth();
 
   return (
     <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10 }}>
-      <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15 }}>{bundle.name}</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 15, flex: 1 }}>{bundle.name}</Text>
+        {isAdmin ? (
+          <Pressable onPress={() => router.push({ pathname: "/(tabs)/exercises/bundles/[id]/edit", params: { id: bundle.id } })}>
+            <Text style={{ color: colors.primary, fontFamily: fonts.body, fontSize: 12 }}>Edit</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         {main?.imageUrl ? (
-          <Image source={{ uri: main.imageUrl }} style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.text }} />
+          <ZoomableThumbnail uri={main.imageUrl} alt={main.name} style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: colors.text }} />
         ) : null}
         <Text style={{ color: colors.text, fontFamily: fonts.body, fontSize: 13 }}>{main?.name ?? "Unknown exercise"}</Text>
       </View>
@@ -158,7 +191,7 @@ function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: 
             return (
               <View key={altId} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 {alt?.imageUrl ? (
-                  <Image source={{ uri: alt.imageUrl }} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
+                  <ZoomableThumbnail uri={alt.imageUrl} alt={alt.name} style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.text }} />
                 ) : null}
                 <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 12 }}>{alt?.name ?? "Unknown exercise"}</Text>
               </View>
@@ -172,26 +205,36 @@ function BundleCard({ bundle, exercises }: { bundle: ExerciseBundle; exercises: 
 
 function ExerciseCard({ exercise }: { exercise: ExerciseTemplate }) {
   return (
-    <Pressable
-      onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: exercise.id } })}
-      style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 8 }}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 12, padding: 12, gap: 8 }}>
       {exercise.imageUrl ? (
-        <Image source={{ uri: exercise.imageUrl }} style={{ width: "100%", height: 90, borderRadius: 8, backgroundColor: colors.text }} resizeMode="contain" />
+        // A sibling of the navigating Pressable below, not nested inside it: a tappable image
+        // nested inside a tappable card left touch priority to RN's gesture-responder
+        // negotiation, which didn't reliably pick the small inner one.
+        <ZoomableThumbnail
+          uri={exercise.imageUrl}
+          alt={exercise.name}
+          style={{ width: "100%", height: 90, borderRadius: 8, backgroundColor: colors.text }}
+          resizeMode="contain"
+        />
       ) : null}
-      <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
-        {exercise.name}
-      </Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
-        {(exercise.primaryMuscles ?? []).slice(0, 2).map((m) => (
-          <View key={m} style={{ backgroundColor: colors.background, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-            <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 9, textTransform: "uppercase" }}>{m}</Text>
-          </View>
-        ))}
-      </View>
-      <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>
-        {exercise.equipment} · {exercise.category}
-      </Text>
-    </Pressable>
+      <Pressable
+        onPress={() => router.push({ pathname: "/(tabs)/exercises/[id]", params: { id: exercise.id } })}
+        style={{ gap: 8 }}
+      >
+        <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 13 }} numberOfLines={2}>
+          {exercise.name}
+        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}>
+          {(exercise.primaryMuscles ?? []).slice(0, 2).map((m) => (
+            <View key={m} style={{ backgroundColor: colors.background, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+              <Text style={{ color: colors.primary, fontFamily: fonts.bodySemiBold, fontSize: 9, textTransform: "uppercase" }}>{m}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.body, fontSize: 11, textTransform: "capitalize" }}>
+          {exercise.equipment} · {exercise.category}
+        </Text>
+      </Pressable>
+    </View>
   );
 }

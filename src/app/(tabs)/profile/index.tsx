@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import { useProfile } from "../../hooks/useProfile";
-import { useMembership } from "../../hooks/useMembership";
-import { useWorkouts } from "../../hooks/useWorkouts";
-import { useAuthStore } from "../../core/auth/authStore";
-import { uploadImage } from "../../core/services/cloudinary.service";
-import { colors, fonts } from "../../core/theme/tokens";
+import { Link, router } from "expo-router";
+import { useProfile } from "../../../hooks/useProfile";
+import { useMembership } from "../../../hooks/useMembership";
+import { useWorkouts } from "../../../hooks/useWorkouts";
+import { useAuthStore } from "../../../core/auth/authStore";
+import { uploadImage } from "../../../core/services/cloudinary.service";
+import { colors, fonts } from "../../../core/theme/tokens";
 
 const TIER_STYLES: Record<string, { bg: string; text: string }> = {
   elite: { bg: colors.warning, text: colors.background },
@@ -154,6 +154,16 @@ export default function Profile() {
           </View>
         </View>
       </View>
+
+      {/* Admin */}
+      {isAdmin ? (
+        <Link href="/(tabs)/profile/admin" asChild>
+          <Pressable style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: colors.text, fontFamily: fonts.bodySemiBold, fontSize: 14 }}>Admin Dashboard</Text>
+            <Text style={{ color: colors.primary }}>›</Text>
+          </Pressable>
+        </Link>
+      ) : null}
 
       {/* Account actions */}
       <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 10 }}>
